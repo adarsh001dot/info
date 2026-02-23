@@ -1,21 +1,31 @@
+import os
 import logging
 import requests
 import random
 import string
 import asyncio
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
 
+# ==================== LOAD ENVIRONMENT VARIABLES ====================
+load_dotenv()
+
+# Get MongoDB URI from .env file
+MONGO_URI = os.getenv('MONGODB_URI')
+
+if not MONGO_URI:
+    print("❌ ERROR: MONGODB_URI not found in .env file!")
+    print("Please create .env file with: MONGODB_URI=your_connection_string")
+    exit(1)
+
 # ==================== CONFIGURATION ====================
 BOT_TOKEN = "8432105036:AAE6BQDg9qcxdjeEkyr9G1QiQGuHhWVgMoI"
 OWNER_ID = 7459756974
 ADMIN_IDS = [7459756974, 2011028235]
-
-# ✅ FIXED MongoDB Connection String
-MONGO_URI = "mongodb+srv://nikilsaxena843_db_user:3gFwy2T4IjsFt0cY@vipbot.puv6gfk.mongodb.net/vip_bot?retryWrites=true&w=majority&authSource=admin"
 
 # Price Configuration: 1 Point = ₹5
 POINT_PRICE = 5
@@ -31,17 +41,15 @@ POINT_PACKAGES = {
 API_URL = "https://open-source-1.onrender.com/tg-user"
 REACTIONS = ["❤️‍🔥", "💀", "😈", "☠️", "💘", "💝", "💕", "💞", "💓", "💗"]
 
-# Languages
+# Languages (same as before - keeping it short here)
 LANGUAGES = {
     "hi": {
         "welcome": "🎉 स्वागत है VIP बॉट में!\nआपके पॉइंट्स: {points}",
-        "menu": "मुख्य मेनू",
         "check_user": "🔍 यूजर चेक करें",
         "buy_points": "💰 पॉइंट्स खरीदें",
         "gift_code": "🎁 गिफ्ट कोड",
         "contact_admin": "📞 एडमिन से संपर्क",
         "language": "🌐 भाषा बदलें",
-        "points_balance": "आपके पॉइंट्स: {points}",
         "enter_user_id": "यूजर आईडी भेजें:",
         "processing": "⏳ प्रोसेस हो रहा है...",
         "result": "✅ रिजल्ट:\nदेश: {country}\nकोड: {code}\nनंबर: {number}",
@@ -51,7 +59,6 @@ LANGUAGES = {
         "no_user": "❌ यूजर नहीं मिला",
         "choose_package": "पैकेज चुनें:",
         "payment_info": "💳 पेमेंट के लिए UPI: vip@paytm\nराशि: ₹{price}\n{points} पॉइंट्स के लिए",
-        "payment_done": "✅ पेमेंट कर दिया है?",
         "confirm_payment": "✅ हां, पेमेंट किया",
         "cancel": "❌ रद्द करें",
         "payment_confirm_msg": "एडमिन को सूचना भेज दी गई है। जल्द ही पॉइंट्स ऐड कर दिए जाएंगे।",
@@ -68,13 +75,11 @@ LANGUAGES = {
     },
     "en": {
         "welcome": "🎉 Welcome to VIP Bot!\nYour Points: {points}",
-        "menu": "Main Menu",
         "check_user": "🔍 Check User",
         "buy_points": "💰 Buy Points",
         "gift_code": "🎁 Gift Code",
         "contact_admin": "📞 Contact Admin",
         "language": "🌐 Change Language",
-        "points_balance": "Your Points: {points}",
         "enter_user_id": "Send User ID:",
         "processing": "⏳ Processing...",
         "result": "✅ Result:\nCountry: {country}\nCode: {code}\nNumber: {number}",
@@ -84,7 +89,6 @@ LANGUAGES = {
         "no_user": "❌ User not found",
         "choose_package": "Choose Package:",
         "payment_info": "💳 Pay to UPI: vip@paytm\nAmount: ₹{price}\nFor {points} Points",
-        "payment_done": "✅ Done Payment?",
         "confirm_payment": "✅ Yes, Paid",
         "cancel": "❌ Cancel",
         "payment_confirm_msg": "Notification sent to admin. Points will be added soon.",
@@ -101,13 +105,15 @@ LANGUAGES = {
     }
 }
 
-# ==================== ✅ FIXED DATABASE SETUP ====================
+# ==================== DATABASE SETUP ====================
 print("\n" + "="*60)
 print("🔌 CONNECTING TO MONGODB...")
 print("="*60)
+print(f"📌 Using MongoDB URI from .env file")
+print(f"📌 Connection string: {MONGO_URI[:50]}...")  # Show partial for security
 
 try:
-    # ✅ Simple connection without extra options
+    # Simple connection
     client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
     
     # Test connection
@@ -126,10 +132,11 @@ try:
         gift_codes_col.create_index('code', unique=True)
         payments_col.create_index('timestamp')
         admin_msgs_col.create_index('timestamp')
+        print("✅ Indexes created/verified")
     except Exception as e:
         print(f"⚠️ Index warning: {e}")
     
-    print("✅✅✅ MongoDB Connected Successfully! ✅✅✅")
+    print("✅✅✅ MONGODB CONNECTED SUCCESSFULLY! ✅✅✅")
     print(f"📊 Database: vip_bot")
     print(f"📁 Collections: users, gift_codes, payments, admin_msgs")
     print("="*60 + "\n")
@@ -137,9 +144,9 @@ try:
 except Exception as e:
     print(f"❌ MongoDB Connection Failed: {e}")
     print("\n🔴🔴🔴 FIX THESE ISSUES: 🔴🔴🔴")
-    print("1. Go to MongoDB Atlas -> Network Access -> Add IP: 0.0.0.0/0")
-    print("2. Go to Database Access -> Reset password for nikilsaxena843_db_user")
-    print("3. Use this EXACT connection string in MongoDB Compass to test:")
+    print("1. Check if .env file has correct MONGODB_URI")
+    print("2. Go to MongoDB Atlas -> Network Access -> Add IP: 0.0.0.0/0")
+    print("3. Test connection in MongoDB Compass:")
     print("   mongodb+srv://nikilsaxena843_db_user:3gFwy2T4IjsFt0cY@vipbot.puv6gfk.mongodb.net/")
     print("="*60)
     exit(1)
@@ -534,6 +541,7 @@ def main():
     print(f"👑 Owner ID: {OWNER_ID}")
     print(f"👥 Admins: {ADMIN_IDS}")
     print(f"💎 Points: 1 = ₹{POINT_PRICE}")
+    print(f"📁 Using .env file for MongoDB URI")
     print("="*60)
     
     app = Application.builder().token(BOT_TOKEN).build()
