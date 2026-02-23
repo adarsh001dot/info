@@ -14,8 +14,8 @@ BOT_TOKEN = "8432105036:AAE6BQDg9qcxdjeEkyr9G1QiQGuHhWVgMoI"
 OWNER_ID = 7459756974
 ADMIN_IDS = [7459756974, 2011028235]
 
-# MongoDB Connection String - FIXED
-MONGO_URI = "mongodb+srv://nikilsaxena843_db_user:3gFwy2T4IjsFt0cY@vipbot.puv6gfk.mongodb.net/vip_bot?retryWrites=true&w=majority&ssl=true&ssl_cert_reqs=CERT_NONE&appName=vipbot"
+# ✅ FIXED MongoDB Connection String
+MONGO_URI = "mongodb+srv://nikilsaxena843_db_user:3gFwy2T4IjsFt0cY@vipbot.puv6gfk.mongodb.net/vip_bot?retryWrites=true&w=majority&authSource=admin"
 
 # Price Configuration: 1 Point = ₹5
 POINT_PRICE = 5
@@ -28,10 +28,7 @@ POINT_PACKAGES = {
     "5000": {"points": 5000, "price": 25000, "emoji": "⚡"},
 }
 
-# API Endpoint
 API_URL = "https://open-source-1.onrender.com/tg-user"
-
-# Reaction emojis
 REACTIONS = ["❤️‍🔥", "💀", "😈", "☠️", "💘", "💝", "💕", "💞", "💓", "💗"]
 
 # Languages
@@ -104,21 +101,14 @@ LANGUAGES = {
     }
 }
 
-# ==================== DATABASE SETUP - FIXED ====================
+# ==================== ✅ FIXED DATABASE SETUP ====================
 print("\n" + "="*60)
 print("🔌 CONNECTING TO MONGODB...")
 print("="*60)
 
 try:
-    # MongoDB Connection with proper options
-    client = MongoClient(
-        MONGO_URI,
-        serverSelectionTimeoutMS=10000,  # 10 seconds timeout
-        connectTimeoutMS=10000,
-        socketTimeoutMS=10000,
-        maxPoolSize=50,
-        retryWrites=True
-    )
+    # ✅ Simple connection without extra options
+    client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
     
     # Test connection
     client.admin.command('ping')
@@ -130,37 +120,27 @@ try:
     payments_col = db['payments']
     admin_msgs_col = db['admin_messages']
     
-    # Create indexes (with error handling)
+    # Create indexes
     try:
         users_col.create_index('user_id', unique=True)
-    except:
-        # Index might already exist
-        pass
-    
-    try:
         gift_codes_col.create_index('code', unique=True)
-    except:
-        pass
+        payments_col.create_index('timestamp')
+        admin_msgs_col.create_index('timestamp')
+    except Exception as e:
+        print(f"⚠️ Index warning: {e}")
     
-    print("✅ MongoDB Connected Successfully!")
+    print("✅✅✅ MongoDB Connected Successfully! ✅✅✅")
     print(f"📊 Database: vip_bot")
     print(f"📁 Collections: users, gift_codes, payments, admin_msgs")
     print("="*60 + "\n")
     
-except ServerSelectionTimeoutError as e:
-    print(f"❌ MongoDB Connection Failed: Server timeout")
-    print(f"Error: {e}")
-    print("\n💡 TRY THIS FIX:")
-    print("1. Go to MongoDB Atlas -> Network Access")
-    print("2. Add IP: 0.0.0.0/0 (Allow from anywhere)")
-    print("3. Or use MongoDB Compass with same connection string")
-    print("="*60)
-    exit(1)
-    
 except Exception as e:
-    print(f"❌ Unexpected Error: {e}")
-    print("\n💡 FIXED CONNECTION STRING (COPY THIS):")
-    print("mongodb+srv://nikilsaxena843_db_user:3gFwy2T4IjsFt0cY@vipbot.puv6gfk.mongodb.net/vip_bot?retryWrites=true&w=majority&ssl=true&ssl_cert_reqs=CERT_NONE&appName=vipbot")
+    print(f"❌ MongoDB Connection Failed: {e}")
+    print("\n🔴🔴🔴 FIX THESE ISSUES: 🔴🔴🔴")
+    print("1. Go to MongoDB Atlas -> Network Access -> Add IP: 0.0.0.0/0")
+    print("2. Go to Database Access -> Reset password for nikilsaxena843_db_user")
+    print("3. Use this EXACT connection string in MongoDB Compass to test:")
+    print("   mongodb+srv://nikilsaxena843_db_user:3gFwy2T4IjsFt0cY@vipbot.puv6gfk.mongodb.net/")
     print("="*60)
     exit(1)
 
@@ -173,42 +153,34 @@ logger = logging.getLogger(__name__)
 
 # ==================== HELPER FUNCTIONS ====================
 def get_user_lang(user_id):
-    """Get user's language preference"""
     user = users_col.find_one({"user_id": user_id})
     return user.get("lang", "en") if user else "en"
 
 def get_text(user_id, key, **kwargs):
-    """Get text in user's language"""
     lang = get_user_lang(user_id)
     text = LANGUAGES[lang].get(key, LANGUAGES["en"][key])
     return text.format(**kwargs)
 
 def generate_gift_code():
-    """Generate random gift code"""
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=12))
 
 async def add_reaction(update: Update, context: ContextTypes.DEFAULT_TYPE, message=None):
-    """Add random reaction to message"""
     try:
         if not message:
             message = update.effective_message
         reaction = random.choice(REACTIONS)
-        # Send reaction as separate message (since API doesn't support native reactions)
         await message.reply_text(reaction)
     except Exception as e:
         logger.error(f"Reaction error: {e}")
 
 # ==================== HANDLERS ====================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Start command handler"""
     user = update.effective_user
     user_id = user.id
     
-    # Check if user exists
     existing_user = users_col.find_one({"user_id": user_id})
     
     if not existing_user:
-        # New user
         user_data = {
             "user_id": user_id,
             "username": user.username,
@@ -225,7 +197,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         points = existing_user.get("points", 0)
     
-    # Create keyboard
     keyboard = [
         [InlineKeyboardButton(get_text(user_id, "check_user"), callback_data="check_user")],
         [InlineKeyboardButton(get_text(user_id, "buy_points"), callback_data="buy_points"),
@@ -234,7 +205,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
          InlineKeyboardButton(get_text(user_id, "language"), callback_data="change_lang")]
     ]
     
-    # Add owner panel if owner
     if user_id == OWNER_ID or user_id in ADMIN_IDS:
         keyboard.append([InlineKeyboardButton("👑 Owner Panel", callback_data="owner_panel")])
     
@@ -245,7 +215,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await add_reaction(update, context, sent_msg)
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle button clicks"""
     query = update.callback_query
     await query.answer()
     
@@ -272,26 +241,29 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
     elif data.startswith("buy_package_"):
         package = data.replace("buy_package_", "")
-        await process_payment(query, user_id, package)
+        await process_payment(query, user_id, package, context)
         
     elif data == "confirm_payment":
-        # Save payment request
         payment_data = {
             "user_id": user_id,
             "package": context.user_data.get('pending_package'),
+            "amount": context.user_data.get('pending_amount'),
             "timestamp": datetime.now(),
             "status": "pending"
         }
         payments_col.insert_one(payment_data)
         
-        # Notify admin
-        await context.bot.send_message(
-            OWNER_ID,
-            f"💰 New Payment Request!\n"
-            f"User: {user_id}\n"
-            f"Package: {context.user_data.get('pending_package')}\n"
-            f"Amount: ₹{context.user_data.get('pending_amount')}"
-        )
+        for admin_id in ADMIN_IDS:
+            try:
+                await context.bot.send_message(
+                    admin_id,
+                    f"💰 New Payment Request!\n"
+                    f"User: {user_id}\n"
+                    f"Package: {context.user_data.get('pending_package')} points\n"
+                    f"Amount: ₹{context.user_data.get('pending_amount')}"
+                )
+            except:
+                pass
         
         await query.edit_message_text(get_text(user_id, "payment_confirm_msg"))
         
@@ -306,14 +278,12 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data.startswith("lang_"):
         lang = data.replace("lang_", "")
         users_col.update_one({"user_id": user_id}, {"$set": {"lang": lang}})
-        # Restart bot for user
         await query.edit_message_text("✅ Language Changed! Send /start again.")
         
     elif data == "back":
         await start(update, context)
 
 async def show_point_packages(query, user_id):
-    """Show available point packages"""
     keyboard = []
     for key, package in POINT_PACKAGES.items():
         btn_text = f"{package['emoji']} {package['points']} Points - ₹{package['price']}"
@@ -327,14 +297,11 @@ async def show_point_packages(query, user_id):
         reply_markup=reply_markup
     )
 
-async def process_payment(query, user_id, package_key):
-    """Process payment for package"""
+async def process_payment(query, user_id, package_key, context):
     package = POINT_PACKAGES[package_key]
     
-    # Store in context
-    query._extract_meta["user_data"] = query._extract_meta.get("user_data", {})
-    query._extract_meta["user_data"]['pending_package'] = package_key
-    query._extract_meta["user_data"]['pending_amount'] = package['price']
+    context.user_data['pending_package'] = package_key
+    context.user_data['pending_amount'] = package['price']
     
     text = get_text(user_id, "payment_info", 
                     price=package['price'], 
@@ -349,7 +316,6 @@ async def process_payment(query, user_id, package_key):
     await query.edit_message_text(text, reply_markup=reply_markup)
 
 async def change_language(query, user_id):
-    """Change language menu"""
     keyboard = [
         [InlineKeyboardButton("🇮🇳 हिन्दी", callback_data="lang_hi")],
         [InlineKeyboardButton("🇬🇧 English", callback_data="lang_en")],
@@ -359,26 +325,23 @@ async def change_language(query, user_id):
     await query.edit_message_text("Choose Language / भाषा चुनें:", reply_markup=reply_markup)
 
 async def owner_panel(query, user_id, context):
-    """Owner panel with stats"""
     if user_id != OWNER_ID and user_id not in ADMIN_IDS:
         await query.edit_message_text("❌ Unauthorized")
         return
     
-    # Get stats
     total_users = users_col.count_documents({})
-    total_points = sum(user.get("points", 0) for user in users_col.find())
+    total_points = 0
+    for user in users_col.find():
+        total_points += user.get("points", 0)
     
-    # Today's income
     today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    today_payments = list(payments_col.find({"timestamp": {"$gte": today_start}}))
-    today_income = sum(500 for p in today_payments)  # Assuming min package ₹500
+    today_payments = payments_col.count_documents({"timestamp": {"$gte": today_start}})
+    today_income = today_payments * 500
     
-    # Month income
     month_start = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    month_payments = list(payments_col.find({"timestamp": {"$gte": month_start}}))
-    month_income = sum(500 for p in month_payments)
+    month_payments = payments_col.count_documents({"timestamp": {"$gte": month_start}})
+    month_income = month_payments * 500
     
-    # Pending payments
     pending = payments_col.count_documents({"status": "pending"})
     
     text = f"👑 **Owner Panel**\n\n"
@@ -395,7 +358,6 @@ async def owner_panel(query, user_id, context):
         [InlineKeyboardButton("🎁 Generate 250 Points Gift", callback_data="gen_gift_250")],
         [InlineKeyboardButton("🎁 Generate 500 Points Gift", callback_data="gen_gift_500")],
         [InlineKeyboardButton("🎁 Generate 1000 Points Gift", callback_data="gen_gift_1000")],
-        [InlineKeyboardButton("📊 Export Users", callback_data="export_users")],
         [InlineKeyboardButton("🔙 Back", callback_data="back")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -403,7 +365,6 @@ async def owner_panel(query, user_id, context):
     await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='Markdown')
 
 async def generate_gift(query, user_id, points, context):
-    """Generate gift code"""
     if user_id != OWNER_ID and user_id not in ADMIN_IDS:
         return
     
@@ -429,7 +390,6 @@ async def generate_gift(query, user_id, points, context):
     )
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle text messages"""
     user_id = update.effective_user.id
     text = update.message.text
     action = context.user_data.get('action')
@@ -444,18 +404,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await start(update, context)
 
 async def check_user(update: Update, context: ContextTypes.DEFAULT_TYPE, user_id_to_check):
-    """Check user via API"""
     user_id = update.effective_user.id
     
-    # Check points
     user = users_col.find_one({"user_id": user_id})
     if not user or user.get("points", 0) < 10:
         await update.message.reply_text(
-            get_text(user_id, "insufficient_points", points=user.get("points", 0))
+            get_text(user_id, "insufficient_points", points=user.get("points", 0) if user else 0)
         )
         return
     
-    # Call API
     try:
         await update.message.reply_text(get_text(user_id, "processing"))
         
@@ -471,14 +428,12 @@ async def check_user(update: Update, context: ContextTypes.DEFAULT_TYPE, user_id
             if data.get("success") and data.get("data", {}).get("success"):
                 user_data = data["data"]
                 
-                # Deduct points
                 new_points = user["points"] - 10
                 users_col.update_one(
                     {"user_id": user_id},
                     {"$set": {"points": new_points}, "$inc": {"total_used": 1}}
                 )
                 
-                # Send result
                 result_text = get_text(
                     user_id,
                     "result",
@@ -487,11 +442,8 @@ async def check_user(update: Update, context: ContextTypes.DEFAULT_TYPE, user_id
                     number=user_data.get("number", "N/A")
                 )
                 sent_msg = await update.message.reply_text(result_text)
-                
-                # Add reaction
                 await add_reaction(update, context, sent_msg)
                 
-                # Send points info
                 await update.message.reply_text(
                     get_text(user_id, "points_deducted", points=10, remaining=new_points)
                 )
@@ -506,7 +458,6 @@ async def check_user(update: Update, context: ContextTypes.DEFAULT_TYPE, user_id
     context.user_data['action'] = None
 
 async def redeem_gift(update: Update, context: ContextTypes.DEFAULT_TYPE, code):
-    """Redeem gift code"""
     user_id = update.effective_user.id
     
     gift = gift_codes_col.find_one({
@@ -520,13 +471,11 @@ async def redeem_gift(update: Update, context: ContextTypes.DEFAULT_TYPE, code):
         context.user_data['action'] = None
         return
     
-    # Add points
     users_col.update_one(
         {"user_id": user_id},
         {"$inc": {"points": gift["points"]}}
     )
     
-    # Mark as used
     gift_codes_col.update_one(
         {"_id": gift["_id"]},
         {"$set": {"used_by": user_id, "used_at": datetime.now()}}
@@ -539,10 +488,8 @@ async def redeem_gift(update: Update, context: ContextTypes.DEFAULT_TYPE, code):
     context.user_data['action'] = None
 
 async def contact_admin(update: Update, context: ContextTypes.DEFAULT_TYPE, message):
-    """Contact admin"""
     user_id = update.effective_user.id
     
-    # Save message
     msg_data = {
         "user_id": user_id,
         "username": update.effective_user.username,
@@ -553,7 +500,6 @@ async def contact_admin(update: Update, context: ContextTypes.DEFAULT_TYPE, mess
     }
     admin_msgs_col.insert_one(msg_data)
     
-    # Forward to all admins
     forward_text = f"📨 **New Message from User**\n\n"
     forward_text += f"👤 **User:** {user_id}\n"
     forward_text += f"📝 **Name:** {update.effective_user.first_name}\n"
@@ -572,7 +518,6 @@ async def contact_admin(update: Update, context: ContextTypes.DEFAULT_TYPE, mess
     context.user_data['action'] = None
 
 async def redeem_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle /redeem command"""
     if not context.args:
         await update.message.reply_text("Usage: /redeem <gift_code>")
         return
@@ -582,7 +527,6 @@ async def redeem_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ==================== MAIN ====================
 def main():
-    """Start the bot"""
     print("\n" + "="*60)
     print("🚀 STARTING VIP BOT...")
     print("="*60)
@@ -590,19 +534,15 @@ def main():
     print(f"👑 Owner ID: {OWNER_ID}")
     print(f"👥 Admins: {ADMIN_IDS}")
     print(f"💎 Points: 1 = ₹{POINT_PRICE}")
-    print(f"🎁 Reactions: {len(REACTIONS)} emojis")
     print("="*60)
     
-    # Create application
     app = Application.builder().token(BOT_TOKEN).build()
     
-    # Add handlers
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("redeem", redeem_command))
     app.add_handler(CallbackQueryHandler(button_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
-    # Start bot
     print("✅ Bot is ready! Press Ctrl+C to stop.")
     print("="*60 + "\n")
     
