@@ -4,7 +4,6 @@ import requests
 import random
 import string
 import asyncio
-import re
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -28,7 +27,7 @@ if not MONGO_URI:
 BOT_TOKEN = "8432105036:AAE6BQDg9qcxdjeEkyr9G1QiQGuHhWVgMoI"
 OWNER_ID = 7459756974
 ADMIN_IDS = [7459756974, 2011028235]
-ADMIN_USERNAME = "@VIP_X_OFFICIAL"  # Admin username for display
+ADMIN_USERNAME = "@VIP_X_OFFICIAL"  # Admin username with underscore
 
 # UPI ID for payments
 UPI_ID = "nanhin.3@ptaxis"
@@ -516,13 +515,14 @@ def disable_buttons(reply_markup):
     return InlineKeyboardMarkup(new_keyboard)
 
 def escape_markdown(text):
-    """Escape markdown special characters but preserve underscores"""
+    """Escape markdown special characters but PRESERVE underscores"""
     if not text:
         return ""
     
-    # Only escape characters that actually need escaping in Markdown
-    # But preserve underscores (_) as they are valid in usernames
-    escape_chars = r'\*`['
+    # List of characters that need escaping in Markdown
+    # IMPORTANT: Underscore (_) is NOT included here to preserve it
+    escape_chars = ['*', '`', '[', ']', '(', ')', '~', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
+    
     for char in escape_chars:
         text = text.replace(char, f'\\{char}')
     
@@ -556,7 +556,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         searches = existing_user.get("total_used", 0)
         joined = existing_user.get("joined_date", datetime.now()).strftime("%Y-%m-%d")
     
-    # Escape name if needed but preserve special characters
+    # Don't escape the name - preserve all characters
     name = user.first_name
     
     welcome_text = UI["welcome"].format(
@@ -566,7 +566,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         points=points,
         searches=searches,
         joined=joined,
-        admin=ADMIN_USERNAME  # Add admin username to welcome message
+        admin=ADMIN_USERNAME  # This will show @VIP_X_OFFICIAL with underscore
     )
     
     keyboard = [
@@ -1246,10 +1246,12 @@ async def admin_reply_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
     """Handle admin reply to user - FIXED: Now working properly"""
     user_id = update.effective_user.id
     
+    # Check if user is admin
     if user_id != OWNER_ID and user_id not in ADMIN_IDS:
         await update.message.reply_text("❌ Unauthorized")
         return ConversationHandler.END
     
+    # Get the target user ID from context
     target_user_id = context.user_data.get('reply_to_user')
     if not target_user_id:
         await update.message.reply_text("❌ No user selected to reply to")
@@ -1283,10 +1285,12 @@ async def admin_reply_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
         # Clear the reply target
         context.user_data['reply_to_user'] = None
         
+        # End the conversation
+        return ConversationHandler.END
+        
     except Exception as e:
         await update.message.reply_text(f"❌ Failed to send reply: {str(e)}")
-    
-    return ConversationHandler.END
+        return ConversationHandler.END
 
 async def redeem_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.args:
@@ -1307,7 +1311,7 @@ async def screenshot_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 async def admin_reply_conversation(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle admin reply conversation - FIXED"""
-    if update.message.text:
+    if update.message and update.message.text:
         return await admin_reply_handler(update, context)
     else:
         await update.message.reply_text("❌ Please send a text message")
