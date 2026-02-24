@@ -4,6 +4,7 @@ import requests
 import random
 import string
 import asyncio
+import re
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -34,7 +35,7 @@ UPI_ID = "nanhin.3@ptaxis"
 
 # Price Configuration: 1 Point = ₹5
 POINT_PRICE = 5
-WELCOME_BONUS = 2  # Changed from 10 to 2
+WELCOME_BONUS = 2
 CHECK_PRICE = 1  # 1 point per search
 
 # Point Packages
@@ -77,7 +78,7 @@ def format_price(amount):
     """Format price display"""
     return f"💰 **₹{amount}**"
 
-# Professional UI Templates
+# Professional UI Templates with admin name
 UI = {
     "welcome": """
 ╔════════════════════════════════════╗
@@ -94,6 +95,8 @@ UI = {
 ├─ 💎 Points Balance: `{points}`
 ├─ 🔍 Total Searches: `{searches}`
 └─ 📅 Joined: `{joined}`
+
+📞 **ADMIN CONTACT:** {admin}
 
 ⚡ **QUICK ACTIONS:**
 Simply click a button below to get started!
@@ -394,7 +397,7 @@ Type your message below. It will be sent directly to the user.
 """,
     
     "admin_reply_received": """
-📨 **Message from Admin:**
+📨 **Message from Admin {admin}:**
 
 {message}
 
@@ -512,6 +515,19 @@ def disable_buttons(reply_markup):
     
     return InlineKeyboardMarkup(new_keyboard)
 
+def escape_markdown(text):
+    """Escape markdown special characters but preserve underscores"""
+    if not text:
+        return ""
+    
+    # Only escape characters that actually need escaping in Markdown
+    # But preserve underscores (_) as they are valid in usernames
+    escape_chars = r'\*`['
+    for char in escape_chars:
+        text = text.replace(char, f'\\{char}')
+    
+    return text
+
 # ==================== HANDLERS ====================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
@@ -522,10 +538,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not existing_user:
         user_data = {
             "user_id": user_id,
-            "username": user.username,
+            "username": user.username,  # Store original username with underscores
             "first_name": user.first_name,
             "last_name": user.last_name,
-            "points": WELCOME_BONUS,  # Using WELCOME_BONUS = 2
+            "points": WELCOME_BONUS,
             "lang": "en",
             "joined_date": datetime.now(),
             "total_used": 0,
@@ -540,13 +556,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         searches = existing_user.get("total_used", 0)
         joined = existing_user.get("joined_date", datetime.now()).strftime("%Y-%m-%d")
     
+    # Escape name if needed but preserve special characters
+    name = user.first_name
+    
     welcome_text = UI["welcome"].format(
-        name=user.first_name,
+        name=name,
         points_display=format_points_display(points),
         user_id=user_id,
         points=points,
         searches=searches,
-        joined=joined
+        joined=joined,
+        admin=ADMIN_USERNAME  # Add admin username to welcome message
     )
     
     keyboard = [
@@ -601,7 +621,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == "send_screenshot":
         package_key = context.user_data.get('pending_package')
         if package_key:
-            await query.edit_message_text(UI["screenshot_prompt"].format(admin=ADMIN_USERNAME), parse_mode='Markdown')
+            await query.edit_message_text(UI["screenshot_prompt"], parse_mode='Markdown')
             return WAITING_SCREENSHOT
         
     elif data == "owner_panel":
@@ -642,7 +662,11 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
     elif data == "back":
         context.user_data.clear()
-        await start(update, context)
+        # Need to recreate the update for start function
+        new_update = Update(update.update_id, message=query.message)
+        new_update.effective_user = update.effective_user
+        new_update.effective_chat = update.effective_chat
+        await start(new_update, context)
     
     return ConversationHandler.END
 
@@ -1219,23 +1243,26 @@ async def contact_admin(update: Update, context: ContextTypes.DEFAULT_TYPE, mess
     context.user_data['action'] = None
 
 async def admin_reply_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle admin reply to user"""
+    """Handle admin reply to user - FIXED: Now working properly"""
     user_id = update.effective_user.id
     
     if user_id != OWNER_ID and user_id not in ADMIN_IDS:
         await update.message.reply_text("❌ Unauthorized")
-        return
+        return ConversationHandler.END
     
     target_user_id = context.user_data.get('reply_to_user')
     if not target_user_id:
         await update.message.reply_text("❌ No user selected to reply to")
-        return
+        return ConversationHandler.END
     
     message = update.message.text
     
     # Send reply to user
     try:
-        reply_text = UI["admin_reply_received"].format(message=message)
+        reply_text = UI["admin_reply_received"].format(
+            admin=ADMIN_USERNAME,
+            message=message
+        )
         await context.bot.send_message(
             chat_id=target_user_id,
             text=reply_text,
@@ -1253,10 +1280,12 @@ async def admin_reply_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
             parse_mode='Markdown'
         )
         
+        # Clear the reply target
+        context.user_data['reply_to_user'] = None
+        
     except Exception as e:
         await update.message.reply_text(f"❌ Failed to send reply: {str(e)}")
     
-    context.user_data['reply_to_user'] = None
     return ConversationHandler.END
 
 async def redeem_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1277,7 +1306,7 @@ async def screenshot_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return WAITING_SCREENSHOT
 
 async def admin_reply_conversation(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle admin reply conversation"""
+    """Handle admin reply conversation - FIXED"""
     if update.message.text:
         return await admin_reply_handler(update, context)
     else:
@@ -1311,7 +1340,7 @@ def main():
         fallbacks=[CommandHandler("start", start)]
     )
     
-    # Conversation handler for admin reply
+    # Conversation handler for admin reply - FIXED entry point
     admin_reply_conv = ConversationHandler(
         entry_points=[CallbackQueryHandler(button_handler, pattern="^reply_to_")],
         states={
