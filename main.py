@@ -10,6 +10,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler, ConversationHandler
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
+from bson.objectid import ObjectId
 
 # ==================== LOAD ENVIRONMENT VARIABLES ====================
 load_dotenv()
@@ -32,97 +33,394 @@ UPI_ID = "nanhin.3@ptaxis"
 
 # Price Configuration: 1 Point = ₹5
 POINT_PRICE = 5
+
+# UPDATED POINT PACKAGES - Smaller packages
 POINT_PACKAGES = {
-    "100": {"points": 100, "price": 500, "emoji": "💎"},
-    "250": {"points": 250, "price": 1250, "emoji": "💎💎"},
-    "500": {"points": 500, "price": 2500, "emoji": "👑"},
-    "1000": {"points": 1000, "price": 5000, "emoji": "👑👑"},
-    "2500": {"points": 2500, "price": 12500, "emoji": "🔥"},
-    "5000": {"points": 5000, "price": 25000, "emoji": "⚡"},
+    "5": {"points": 5, "price": 25, "emoji": "⚡"},
+    "10": {"points": 10, "price": 50, "emoji": "💫"},
+    "15": {"points": 15, "price": 75, "emoji": "✨"},
+    "20": {"points": 20, "price": 100, "emoji": "⭐"},
+    "30": {"points": 30, "price": 150, "emoji": "🌟"},
+    "50": {"points": 50, "price": 250, "emoji": "💎"},
+    "100": {"points": 100, "price": 500, "emoji": "👑"},
+}
+
+# GIFT CODE PACKAGES - Same as buy points
+GIFT_PACKAGES = {
+    "5": {"points": 5, "emoji": "⚡"},
+    "10": {"points": 10, "emoji": "💫"},
+    "15": {"points": 15, "emoji": "✨"},
+    "20": {"points": 20, "emoji": "⭐"},
+    "30": {"points": 30, "emoji": "🌟"},
+    "50": {"points": 50, "emoji": "💎"},
+    "100": {"points": 100, "emoji": "👑"},
 }
 
 API_URL = "https://open-source-1.onrender.com/tg-user"
+CHECK_PRICE = 1  # 1 point per search (changed from 10)
 
-# Reaction emojis - just for reference (will be sent as message reactions)
+# Reaction emojis
 REACTIONS = ["❤️‍🔥", "💀", "😈", "☠️", "💘", "💝", "💕", "💞", "💓", "💗"]
 
-# Languages
+# ==================== PROFESSIONAL UI DESIGNS ====================
+
+BORDER = "━" * 30
+
+def format_header(title, emoji="🎯"):
+    """Format header with professional design"""
+    return f"""
+╔{BORDER}╗
+║  {emoji}  {title.upper()}  {emoji}  ║
+╚{BORDER}╝"""
+
+def format_section(title, emoji="📌"):
+    """Format section with professional design"""
+    return f"\n{emoji} **{title}**\n" + "─" * 25
+
+def format_points_display(points):
+    """Format points display"""
+    return f"💎 **Points:** `{points}`"
+
+def format_price(amount):
+    """Format price display"""
+    return f"💰 **₹{amount}**"
+
+# Professional UI Templates
+UI = {
+    "welcome": """
+╔════════════════════════════════════╗
+║     🎯 VIP USER LOOKUP BOT 🎯      ║
+║         PROFESSIONAL EDITION       ║
+╚════════════════════════════════════╝
+
+👋 **Welcome, {name}!**
+
+{points_display}
+
+📊 **YOUR STATS:**
+├─ 🆔 ID: `{user_id}`
+├─ 💎 Points Balance: `{points}`
+├─ 🔍 Total Searches: `{searches}`
+└─ 📅 Joined: `{joined}`
+
+⚡ **QUICK ACTIONS:**
+Simply click a button below to get started!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+""",
+    
+    "check_user": """
+╔════════════════════════════════════╗
+║        🔍 USER LOOKUP SYSTEM       ║
+╚════════════════════════════════════╝
+
+📤 **Please send the Telegram User ID**
+you want to lookup.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💡 **Example:** `2011028235`
+💎 **Cost:** `1 Point` per lookup
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+""",
+    
+    "result": """
+╔════════════════════════════════════╗
+║        ✅ USER DETAILS FOUND       ║
+╚════════════════════════════════════╝
+
+📱 **CONTACT INFORMATION:**
+├─ 🌍 Country: `{country}`
+├─ 📞 Country Code: `{code}`
+└─ 📱 Phone Number: `{number}`
+
+💎 **POINTS UPDATED:**
+├─ Deducted: `1 Point`
+└─ Remaining: `{remaining}`
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚡ Use /start for main menu
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+""",
+    
+    "insufficient_points": """
+╔════════════════════════════════════╗
+║        ❌ INSUFFICIENT POINTS      ║
+╚════════════════════════════════════╝
+
+📊 **CURRENT BALANCE:**
+├─ 💎 Points: `{points}`
+└─ 🔍 Required: `1 Point`
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💡 **SOLUTIONS:**
+├─ 1️⃣ Buy points from store
+├─ 2️⃣ Use gift code if you have
+└─ 3️⃣ Contact admin for help
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+""",
+    
+    "buy_points": """
+╔════════════════════════════════════╗
+║        💰 POINTS PURCHASE          ║
+╚════════════════════════════════════╝
+
+📊 **PRICE CHART:** `1 Point = ₹{price}`
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+""",
+    
+    "package_display": """
+{emoji} **{points} Points** ─ {price_display}
+└─ 💎 Cost per search: `{per_search}`
+""",
+    
+    "payment_info": """
+╔════════════════════════════════════╗
+║        💳 PAYMENT DETAILS          ║
+╚════════════════════════════════════╝
+
+📦 **PACKAGE:** {emoji} {points} Points
+💵 **AMOUNT:** ₹{price}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🏦 **UPI DETAILS:**
+└─ `{upi}`
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📸 **INSTRUCTIONS:**
+1️⃣ Make payment to above UPI ID
+2️⃣ Click "Send Screenshot" button
+3️⃣ Upload payment screenshot
+4️⃣ Wait for admin approval
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+""",
+    
+    "screenshot_prompt": """
+╔════════════════════════════════════╗
+║        📸 SCREENSHOT UPLOAD        ║
+╚════════════════════════════════════╝
+
+✅ **Please send the payment screenshot.**
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 **REQUIREMENTS:**
+├─ Clear screenshot of UPI payment
+├─ UPI ID should be visible
+├─ Amount should match
+└─ Transaction ID visible
+
+⏳ Admin will verify and add points shortly.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+""",
+    
+    "payment_sent": """
+╔════════════════════════════════════╗
+║     ✅ PAYMENT REQUEST SENT        ║
+╚════════════════════════════════════╝
+
+📤 Your payment request has been 
+   forwarded to admin.
+
+⏳ **Expected Time:** 5-10 minutes
+📞 **Contact:** @admin if urgent
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+""",
+    
+    "gift_code_prompt": """
+╔════════════════════════════════════╗
+║        🎁 GIFT CODE REDEEM         ║
+╚════════════════════════════════════╝
+
+📤 **Please send your gift code.**
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💡 **Example:** `ABC123XYZ789`
+✨ Codes are case-insensitive
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+""",
+    
+    "gift_success": """
+╔════════════════════════════════════╗
+║     ✅ GIFT CODE REDEEMED          ║
+╚════════════════════════════════════╝
+
+🎉 **Congratulations!**
+├─ 💎 Points Added: `{points}`
+└─ 💰 Value: ₹{value}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+""",
+    
+    "gift_invalid": """
+╔════════════════════════════════════╗
+║        ❌ INVALID GIFT CODE        ║
+╚════════════════════════════════════╝
+
+❌ The code you entered is invalid
+   or has already been used.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💡 **Need help?** Contact @admin
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+""",
+    
+    "contact_admin": """
+╔════════════════════════════════════╗
+║        📞 CONTACT ADMIN            ║
+╚════════════════════════════════════╝
+
+📤 **Please type your message below.**
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💡 Admin will reply as soon as possible
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+""",
+    
+    "msg_sent": """
+╔════════════════════════════════════╗
+║        ✅ MESSAGE SENT             ║
+╚════════════════════════════════════╝
+
+📤 Your message has been forwarded
+   to the admin team.
+
+⏳ **Response time:** 5-30 minutes
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+""",
+    
+    "owner_panel": """
+╔════════════════════════════════════╗
+║        👑 OWNER PANEL              ║
+╚════════════════════════════════════╝
+
+📊 **SYSTEM STATISTICS:**
+├─ 👥 Total Users: `{users}`
+├─ 💎 Total Points: `{points}`
+├─ 💰 Today Income: `₹{today_income}`
+├─ 📅 Month Income: `₹{month_income}`
+└─ ⏳ Pending: `{pending}` payments
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚡ **ADMIN TOOLS:**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+""",
+    
+    "payment_request_admin": """
+╔════════════════════════════════════╗
+║     💰 NEW PAYMENT REQUEST         ║
+╚════════════════════════════════════╝
+
+👤 **USER DETAILS:**
+├─ 🆔 ID: `{user_id}`
+├─ 📝 Name: {name}
+└─ 🆔 Username: @{username}
+
+📦 **PACKAGE INFO:**
+├─ 💎 Points: {points}
+└─ 💵 Amount: ₹{amount}
+
+📅 **TIME:** {time}
+🆔 **Payment ID:** `{payment_id}`
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚡ **ACTIONS:**
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+""",
+    
+    "payment_approved_user": """
+╔════════════════════════════════════╗
+║     ✅ PAYMENT APPROVED            ║
+╚════════════════════════════════════╝
+
+🎉 **Your payment has been approved!**
+
+📦 **PACKAGE:** {points} Points
+💰 **AMOUNT:** ₹{amount}
+💎 **NEW BALANCE:** `{balance}`
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚡ You can now use /start
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+""",
+    
+    "payment_rejected_user": """
+╔════════════════════════════════════╗
+║     ❌ PAYMENT REJECTED            ║
+╚════════════════════════════════════╝
+
+❌ Your payment has been rejected.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💡 **POSSIBLE REASONS:**
+├─ Invalid screenshot
+├─ Amount mismatch
+├─ UPI ID not visible
+└─ Transaction failed
+
+📞 **Contact:** @admin for help
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+""",
+    
+    "gift_created_admin": """
+╔════════════════════════════════════╗
+║     ✅ GIFT CODE GENERATED         ║
+╚════════════════════════════════════╝
+
+🎁 **GIFT CODE DETAILS:**
+├─ 📦 Points: `{points}`
+├─ 💰 Value: ₹{value}
+└─ 🆔 Code: `{code}`
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📤 **Share this code with user:**
+`{code}`
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+""",
+    
+    "no_pending": """
+╔════════════════════════════════════╗
+║        📭 NO PENDING PAYMENTS      ║
+╚════════════════════════════════════╝
+
+✅ All payments have been processed.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"""
+}
+
+# Languages (simplified - using UI templates)
 LANGUAGES = {
     "hi": {
-        "welcome": "🎉 स्वागत है VIP बॉट में!\nआपके पॉइंट्स: {points}",
         "check_user": "🔍 यूजर चेक करें",
         "buy_points": "💰 पॉइंट्स खरीदें",
         "gift_code": "🎁 गिफ्ट कोड",
         "contact_admin": "📞 एडमिन से संपर्क",
         "language": "🌐 भाषा बदलें",
-        "enter_user_id": "यूजर आईडी भेजें:",
-        "processing": "⏳ प्रोसेस हो रहा है...",
-        "result": "✅ रिजल्ट:\nदेश: {country}\nकोड: {code}\nनंबर: {number}",
-        "insufficient_points": "❌ अपर्याप्त पॉइंट्स! आपके पास {points} पॉइंट्स हैं।",
-        "points_deducted": "{points} पॉइंट्स कट गए। बचे पॉइंट्स: {remaining}",
-        "error": "❌ एरर: {error}",
-        "no_user": "❌ यूजर नहीं मिला",
-        "choose_package": "पैकेज चुनें:",
-        "payment_info": "💳 {points} पॉइंट्स के लिए UPI: {upi}\nराशि: ₹{price}\n\n✅ पेमेंट करने के बाद नीचे बटन दबाएं",
-        "send_screenshot": "✅ पेमेंट का स्क्रीनशॉट भेजें",
-        "screenshot_prompt": "📸 कृपया UPI पेमेंट का स्क्रीनशॉट भेजें।\n\nएडमिन चेक करके पॉइंट्स ऐड कर देंगे।",
-        "payment_request_sent": "✅ आपका पेमेंट रिक्वेस्ट एडमिन को भेज दिया गया है!\nजल्द ही पॉइंट्स ऐड कर दिए जाएंगे।",
         "cancel": "❌ रद्द करें",
-        "gift_code_prompt": "गिफ्ट कोड भेजें:",
-        "gift_code_success": "🎉 {points} पॉइंट्स मिल गए!",
-        "gift_code_invalid": "❌ गलत कोड",
-        "admin_contact_msg": "एडमिन से संपर्क करने के लिए यहां लिखें:",
-        "msg_sent": "✅ मैसेज भेज दिया गया",
-        "owner_panel": "👑 ओनर पैनल",
-        "total_users": "कुल यूजर्स: {count}",
-        "total_points": "कुल पॉइंट्स: {points}",
-        "today_income": "आज की कमाई: ₹{income}",
-        "month_income": "महीने की कमाई: ₹{income}",
-        "pending_payments": "⏳ लंबित पेमेंट्स: {count}",
         "approve": "✅ Approve",
         "reject": "❌ Reject",
-        "payment_approved": "✅ पेमेंट स्वीकृत! {points} पॉइंट्स आपके अकाउंट में ऐड कर दिए गए हैं।",
-        "payment_rejected": "❌ पेमेंट अस्वीकृत। कृपया एडमिन से संपर्क करें।",
-        "no_pending": "कोई लंबित पेमेंट नहीं है।",
-        "gift_created": "✅ गिफ्ट कोड बन गया!\nकोड: `{code}`\nपॉइंट्स: {points}\nएक्सपायरी: कभी नहीं"
+        "send_screenshot": "📸 Send Screenshot",
+        "view_pending": "📋 View Pending",
+        "back": "🔙 Back",
+        "generate": "🎁 Generate",
     },
     "en": {
-        "welcome": "🎉 Welcome to VIP Bot!\nYour Points: {points}",
         "check_user": "🔍 Check User",
         "buy_points": "💰 Buy Points",
         "gift_code": "🎁 Gift Code",
         "contact_admin": "📞 Contact Admin",
         "language": "🌐 Change Language",
-        "enter_user_id": "Send User ID:",
-        "processing": "⏳ Processing...",
-        "result": "✅ Result:\nCountry: {country}\nCode: {code}\nNumber: {number}",
-        "insufficient_points": "❌ Insufficient Points! You have {points} points.",
-        "points_deducted": "{points} points deducted. Remaining: {remaining}",
-        "error": "❌ Error: {error}",
-        "no_user": "❌ User not found",
-        "choose_package": "Choose Package:",
-        "payment_info": "💳 Pay to UPI: {upi}\nAmount: ₹{price}\nFor {points} Points\n\n✅ Click button after payment",
-        "send_screenshot": "✅ Send Payment Screenshot",
-        "screenshot_prompt": "📸 Please send the UPI payment screenshot.\n\nAdmin will verify and add points.",
-        "payment_request_sent": "✅ Your payment request has been sent to admin!\nPoints will be added soon.",
         "cancel": "❌ Cancel",
-        "gift_code_prompt": "Send Gift Code:",
-        "gift_code_success": "🎉 You got {points} Points!",
-        "gift_code_invalid": "❌ Invalid Code",
-        "admin_contact_msg": "Write your message to admin:",
-        "msg_sent": "✅ Message Sent",
-        "owner_panel": "👑 Owner Panel",
-        "total_users": "Total Users: {count}",
-        "total_points": "Total Points: {points}",
-        "today_income": "Today's Income: ₹{income}",
-        "month_income": "Month's Income: ₹{income}",
-        "pending_payments": "⏳ Pending Payments: {count}",
         "approve": "✅ Approve",
         "reject": "❌ Reject",
-        "payment_approved": "✅ Payment Approved! {points} points added to your account.",
-        "payment_rejected": "❌ Payment Rejected. Please contact admin.",
-        "no_pending": "No pending payments.",
-        "gift_created": "✅ Gift Code Created!\nCode: `{code}`\nPoints: {points}\nExpiry: Never"
+        "send_screenshot": "📸 Send Screenshot",
+        "view_pending": "📋 View Pending",
+        "back": "🔙 Back",
+        "generate": "🎁 Generate",
     }
 }
 
@@ -184,19 +482,13 @@ def get_text(user_id, key, **kwargs):
 def generate_gift_code():
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=12))
 
-async def add_reaction(update: Update, context: ContextTypes.DEFAULT_TYPE, message=None):
-    """Add reaction to message - FIXED: Only for result messages, not every message"""
-    try:
-        # Only react to check_user results, not every message
-        if context.user_data.get('reaction_for_message'):
-            message_id = context.user_data.get('reaction_for_message')
-            if message and message.message_id == message_id:
-                # In future when Telegram supports reactions, we'll use:
-                # await message.react(random.choice(REACTIONS))
-                # For now, we don't send extra messages
-                context.user_data['reaction_for_message'] = None
-    except Exception as e:
-        logger.error(f"Reaction error: {e}")
+def format_points(points):
+    """Format points with emoji"""
+    return f"💎 {points}"
+
+def format_price(amount):
+    """Format price with emoji"""
+    return f"💰 ₹{amount}"
 
 # ==================== HANDLERS ====================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -211,7 +503,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "username": user.username,
             "first_name": user.first_name,
             "last_name": user.last_name,
-            "points": 10,
+            "points": 10,  # Welcome bonus
             "lang": "en",
             "joined_date": datetime.now(),
             "total_used": 0,
@@ -219,8 +511,22 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         }
         users_col.insert_one(user_data)
         points = 10
+        searches = 0
+        joined = datetime.now().strftime("%Y-%m-%d")
     else:
         points = existing_user.get("points", 0)
+        searches = existing_user.get("total_used", 0)
+        joined = existing_user.get("joined_date", datetime.now()).strftime("%Y-%m-%d")
+    
+    # Professional welcome message
+    welcome_text = UI["welcome"].format(
+        name=user.first_name,
+        points_display=format_points_display(points),
+        user_id=user_id,
+        points=points,
+        searches=searches,
+        joined=joined
+    )
     
     keyboard = [
         [InlineKeyboardButton(get_text(user_id, "check_user"), callback_data="check_user")],
@@ -234,10 +540,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard.append([InlineKeyboardButton("👑 Owner Panel", callback_data="owner_panel")])
     
     reply_markup = InlineKeyboardMarkup(keyboard)
-    welcome_text = get_text(user_id, "welcome", points=points)
     
-    await update.message.reply_text(welcome_text, reply_markup=reply_markup)
-    # No reaction on start
+    await update.message.reply_text(welcome_text, reply_markup=reply_markup, parse_mode='Markdown')
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -248,18 +552,18 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     if data == "check_user":
         context.user_data['action'] = 'check_user'
-        await query.edit_message_text(get_text(user_id, "enter_user_id"))
+        await query.edit_message_text(UI["check_user"], parse_mode='Markdown')
         
     elif data == "buy_points":
         await show_point_packages(query, user_id)
         
     elif data == "gift_code":
         context.user_data['action'] = 'gift_code'
-        await query.edit_message_text(get_text(user_id, "gift_code_prompt"))
+        await query.edit_message_text(UI["gift_code_prompt"], parse_mode='Markdown')
         
     elif data == "contact_admin":
         context.user_data['action'] = 'contact_admin'
-        await query.edit_message_text(get_text(user_id, "admin_contact_msg"))
+        await query.edit_message_text(UI["contact_admin"], parse_mode='Markdown')
         
     elif data == "change_lang":
         await change_language(query, user_id)
@@ -269,16 +573,16 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await process_payment(query, user_id, package, context)
         
     elif data == "send_screenshot":
-        # Ask user to send screenshot
         package_key = context.user_data.get('pending_package')
         if package_key:
-            await query.edit_message_text(
-                get_text(user_id, "screenshot_prompt")
-            )
+            await query.edit_message_text(UI["screenshot_prompt"], parse_mode='Markdown')
             return WAITING_SCREENSHOT
         
     elif data == "owner_panel":
         await owner_panel(query, user_id, context)
+        
+    elif data == "view_pending":
+        await view_pending_payments(query, user_id, context)
         
     elif data.startswith("approve_payment_"):
         if user_id == OWNER_ID or user_id in ADMIN_IDS:
@@ -301,34 +605,60 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text("✅ Language Changed! Send /start again.")
         
     elif data == "back":
+        # Clear any pending actions
+        context.user_data.clear()
+        # Restart the bot
         await start(update, context)
     
     return ConversationHandler.END
 
 async def show_point_packages(query, user_id):
-    keyboard = []
+    """Show available point packages with professional UI"""
+    text = UI["buy_points"].format(price=POINT_PRICE)
+    
+    # Build package display
     for key, package in POINT_PACKAGES.items():
-        btn_text = f"{package['emoji']} {package['points']} Points - ₹{package['price']}"
-        keyboard.append([InlineKeyboardButton(btn_text, callback_data=f"buy_package_{key}")])
+        per_search = f"₹{POINT_PRICE} per search"
+        price_display = format_price(package['price'])
+        text += UI["package_display"].format(
+            emoji=package['emoji'],
+            points=package['points'],
+            price_display=price_display,
+            per_search=per_search
+        )
+    
+    text += "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    
+    # Create keyboard with all packages
+    keyboard = []
+    row = []
+    for i, (key, package) in enumerate(POINT_PACKAGES.items()):
+        btn_text = f"{package['emoji']} {package['points']}"
+        row.append(InlineKeyboardButton(btn_text, callback_data=f"buy_package_{key}"))
+        
+        # 3 buttons per row
+        if len(row) == 3 or i == len(POINT_PACKAGES) - 1:
+            keyboard.append(row)
+            row = []
     
     keyboard.append([InlineKeyboardButton(get_text(user_id, "cancel"), callback_data="back")])
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await query.edit_message_text(
-        get_text(user_id, "choose_package"),
-        reply_markup=reply_markup
-    )
+    await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='Markdown')
 
 async def process_payment(query, user_id, package_key, context):
+    """Process payment for package"""
     package = POINT_PACKAGES[package_key]
     
     context.user_data['pending_package'] = package_key
     context.user_data['pending_amount'] = package['price']
     
-    text = get_text(user_id, "payment_info", 
-                    upi=UPI_ID,
-                    price=package['price'], 
-                    points=package['points'])
+    text = UI["payment_info"].format(
+        emoji=package['emoji'],
+        points=package['points'],
+        price=package['price'],
+        upi=UPI_ID
+    )
     
     keyboard = [
         [InlineKeyboardButton(get_text(user_id, "send_screenshot"), callback_data="send_screenshot")],
@@ -336,7 +666,7 @@ async def process_payment(query, user_id, package_key, context):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await query.edit_message_text(text, reply_markup=reply_markup)
+    await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='Markdown')
 
 async def change_language(query, user_id):
     keyboard = [
@@ -348,6 +678,7 @@ async def change_language(query, user_id):
     await query.edit_message_text("Choose Language / भाषा चुनें:", reply_markup=reply_markup)
 
 async def owner_panel(query, user_id, context):
+    """Owner panel with professional UI"""
     if user_id != OWNER_ID and user_id not in ADMIN_IDS:
         await query.edit_message_text("❌ Unauthorized")
         return
@@ -356,44 +687,51 @@ async def owner_panel(query, user_id, context):
     total_points = sum(user.get("points", 0) for user in users_col.find())
     
     today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    today_payments = payments_col.count_documents({"timestamp": {"$gte": today_start}, "status": "approved"})
-    today_income = today_payments * 500
+    today_payments = list(payments_col.find({"timestamp": {"$gte": today_start}, "status": "approved"}))
+    today_income = sum(p.get('amount', 500) for p in today_payments)
     
     month_start = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    month_payments = payments_col.count_documents({"timestamp": {"$gte": month_start}, "status": "approved"})
-    month_income = month_payments * 500
+    month_payments = list(payments_col.find({"timestamp": {"$gte": month_start}, "status": "approved"}))
+    month_income = sum(p.get('amount', 500) for p in month_payments)
     
     pending = payments_col.count_documents({"status": "pending"})
     
-    text = f"👑 **Owner Panel**\n\n"
-    text += f"📊 **Stats:**\n"
-    text += f"👥 Total Users: {total_users}\n"
-    text += f"💎 Total Points: {total_points}\n"
-    text += f"💰 Today Income: ₹{today_income}\n"
-    text += f"📅 Month Income: ₹{month_income}\n"
-    text += f"⏳ Pending Payments: {pending}\n\n"
-    text += f"🔧 **Admin Tools:**\n"
+    text = UI["owner_panel"].format(
+        users=total_users,
+        points=total_points,
+        today_income=today_income,
+        month_income=month_income,
+        pending=pending
+    )
     
-    # Add Pending Payments button if there are pending payments
+    # Build keyboard
     keyboard = []
+    
+    # Pending payments button if any
     if pending > 0:
         keyboard.append([InlineKeyboardButton(f"📋 View Pending Payments ({pending})", callback_data="view_pending")])
     
-    keyboard.extend([
-        [InlineKeyboardButton("🎁 Generate 100 Points Gift", callback_data="gen_gift_100")],
-        [InlineKeyboardButton("🎁 Generate 250 Points Gift", callback_data="gen_gift_250")],
-        [InlineKeyboardButton("🎁 Generate 500 Points Gift", callback_data="gen_gift_500")],
-        [InlineKeyboardButton("🎁 Generate 1000 Points Gift", callback_data="gen_gift_1000")],
-        [InlineKeyboardButton("🎁 Generate 5000 Points Gift", callback_data="gen_gift_5000")],
-        [InlineKeyboardButton("📋 View All Pending", callback_data="view_pending")],
-        [InlineKeyboardButton("🔙 Back", callback_data="back")]
-    ])
+    # Gift code generation buttons
+    gift_row = []
+    for i, (key, package) in enumerate(GIFT_PACKAGES.items()):
+        btn_text = f"{package['emoji']} {package['points']}"
+        gift_row.append(InlineKeyboardButton(btn_text, callback_data=f"gen_gift_{package['points']}"))
+        
+        if len(gift_row) == 4 or i == len(GIFT_PACKAGES) - 1:
+            keyboard.append(gift_row)
+            gift_row = []
+    
+    # Add view pending again if not already added
+    if pending == 0:
+        keyboard.append([InlineKeyboardButton("📋 View Pending", callback_data="view_pending")])
+    
+    keyboard.append([InlineKeyboardButton("🔙 Back", callback_data="back")])
     
     reply_markup = InlineKeyboardMarkup(keyboard)
     await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='Markdown')
 
 async def view_pending_payments(query, user_id, context):
-    """Show all pending payments with approve/reject buttons"""
+    """View all pending payments"""
     if user_id != OWNER_ID and user_id not in ADMIN_IDS:
         await query.edit_message_text("❌ Unauthorized")
         return
@@ -401,19 +739,27 @@ async def view_pending_payments(query, user_id, context):
     pending_payments = list(payments_col.find({"status": "pending"}).sort("timestamp", -1))
     
     if not pending_payments:
-        await query.edit_message_text(get_text(user_id, "no_pending"))
+        await query.edit_message_text(UI["no_pending"], parse_mode='Markdown')
         return
     
-    for payment in pending_payments[:5]:  # Show first 5
+    await query.edit_message_text("📋 **Fetching pending payments...**")
+    
+    for payment in pending_payments:
         user = users_col.find_one({"user_id": payment['user_id']})
-        username = user.get('username', 'Unknown') if user else 'Unknown'
+        name = user.get('first_name', 'Unknown') if user else 'Unknown'
+        username = user.get('username', 'None') if user else 'None'
         
-        text = f"📋 **Payment Request**\n\n"
-        text += f"🆔 ID: `{payment['_id']}`\n"
-        text += f"👤 User: {payment['user_id']} (@{username})\n"
-        text += f"💰 Package: {payment['package']} points\n"
-        text += f"💵 Amount: ₹{payment['amount']}\n"
-        text += f"📅 Date: {payment['timestamp'].strftime('%Y-%m-%d %H:%M:%S')}\n"
+        points = POINT_PACKAGES[payment['package']]['points'] if payment['package'] in POINT_PACKAGES else 0
+        
+        text = UI["payment_request_admin"].format(
+            user_id=payment['user_id'],
+            name=name,
+            username=username,
+            points=points,
+            amount=payment['amount'],
+            time=payment['timestamp'].strftime('%Y-%m-%d %H:%M:%S'),
+            payment_id=str(payment['_id'])
+        )
         
         keyboard = [
             [
@@ -430,77 +776,129 @@ async def view_pending_payments(query, user_id, context):
             parse_mode='Markdown'
         )
     
-    # Don't edit the original message, just send new ones
+    # Send back button
+    keyboard = [[InlineKeyboardButton("🔙 Back", callback_data="owner_panel")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await context.bot.send_message(
+        chat_id=user_id,
+        text="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n🔍 End of pending payments list",
+        reply_markup=reply_markup
+    )
 
 async def approve_payment(query, user_id, payment_id, context):
-    """Approve payment and add points to user"""
+    """Approve payment - FIXED: Only works once per payment"""
     if user_id != OWNER_ID and user_id not in ADMIN_IDS:
         await query.edit_message_text("❌ Unauthorized")
         return
     
-    from bson.objectid import ObjectId
-    payment = payments_col.find_one({"_id": ObjectId(payment_id)})
-    
-    if not payment:
-        await query.edit_message_text("❌ Payment not found")
-        return
-    
-    # Update payment status
-    payments_col.update_one(
-        {"_id": ObjectId(payment_id)},
-        {"$set": {"status": "approved", "approved_by": user_id, "approved_at": datetime.now()}}
-    )
-    
-    # Add points to user
-    points = POINT_PACKAGES[payment['package']]['points']
-    users_col.update_one(
-        {"user_id": payment['user_id']},
-        {"$inc": {"points": points}}
-    )
-    
-    # Notify user
     try:
-        await context.bot.send_message(
-            chat_id=payment['user_id'],
-            text=get_text(payment['user_id'], "payment_approved", points=points)
+        # Check if payment already processed
+        payment = payments_col.find_one({"_id": ObjectId(payment_id)})
+        
+        if not payment:
+            await query.edit_message_text("❌ Payment not found")
+            return
+        
+        if payment.get('status') != 'pending':
+            await query.edit_message_text(f"❌ Payment already {payment.get('status')}")
+            return
+        
+        # Update payment status - ATOMIC operation
+        result = payments_col.update_one(
+            {"_id": ObjectId(payment_id), "status": "pending"},
+            {"$set": {"status": "approved", "approved_by": user_id, "approved_at": datetime.now()}}
         )
-    except:
-        pass
-    
-    await query.edit_message_text(f"✅ Payment approved! {points} points added to user {payment['user_id']}")
+        
+        if result.modified_count == 0:
+            await query.edit_message_text("❌ Payment already processed by someone else")
+            return
+        
+        # Add points to user
+        points = POINT_PACKAGES[payment['package']]['points']
+        
+        # Get user's current points for display
+        user = users_col.find_one({"user_id": payment['user_id']})
+        current_points = user.get('points', 0) if user else 0
+        
+        users_col.update_one(
+            {"user_id": payment['user_id']},
+            {"$inc": {"points": points}}
+        )
+        
+        new_balance = current_points + points
+        
+        # Notify user with professional UI
+        try:
+            user_text = UI["payment_approved_user"].format(
+                points=points,
+                amount=payment['amount'],
+                balance=new_balance
+            )
+            await context.bot.send_message(
+                chat_id=payment['user_id'],
+                text=user_text,
+                parse_mode='Markdown'
+            )
+        except Exception as e:
+            logger.error(f"Failed to notify user: {e}")
+        
+        # Update the button message
+        await query.edit_message_text(
+            f"✅ Payment approved!\n\n"
+            f"User: {payment['user_id']}\n"
+            f"Points: {points}\n"
+            f"Amount: ₹{payment['amount']}\n"
+            f"New Balance: {new_balance}"
+        )
+        
+    except Exception as e:
+        await query.edit_message_text(f"❌ Error: {str(e)}")
 
 async def reject_payment(query, user_id, payment_id, context):
-    """Reject payment"""
+    """Reject payment - FIXED: Only works once per payment"""
     if user_id != OWNER_ID and user_id not in ADMIN_IDS:
         await query.edit_message_text("❌ Unauthorized")
         return
     
-    from bson.objectid import ObjectId
-    payment = payments_col.find_one({"_id": ObjectId(payment_id)})
-    
-    if not payment:
-        await query.edit_message_text("❌ Payment not found")
-        return
-    
-    # Update payment status
-    payments_col.update_one(
-        {"_id": ObjectId(payment_id)},
-        {"$set": {"status": "rejected", "rejected_by": user_id, "rejected_at": datetime.now()}}
-    )
-    
-    # Notify user
     try:
-        await context.bot.send_message(
-            chat_id=payment['user_id'],
-            text=get_text(payment['user_id'], "payment_rejected")
+        # Check if payment already processed
+        payment = payments_col.find_one({"_id": ObjectId(payment_id)})
+        
+        if not payment:
+            await query.edit_message_text("❌ Payment not found")
+            return
+        
+        if payment.get('status') != 'pending':
+            await query.edit_message_text(f"❌ Payment already {payment.get('status')}")
+            return
+        
+        # Update payment status - ATOMIC operation
+        result = payments_col.update_one(
+            {"_id": ObjectId(payment_id), "status": "pending"},
+            {"$set": {"status": "rejected", "rejected_by": user_id, "rejected_at": datetime.now()}}
         )
-    except:
-        pass
-    
-    await query.edit_message_text(f"❌ Payment rejected for user {payment['user_id']}")
+        
+        if result.modified_count == 0:
+            await query.edit_message_text("❌ Payment already processed by someone else")
+            return
+        
+        # Notify user
+        try:
+            await context.bot.send_message(
+                chat_id=payment['user_id'],
+                text=UI["payment_rejected_user"],
+                parse_mode='Markdown'
+            )
+        except Exception as e:
+            logger.error(f"Failed to notify user: {e}")
+        
+        await query.edit_message_text(f"❌ Payment rejected for user {payment['user_id']}")
+        
+    except Exception as e:
+        await query.edit_message_text(f"❌ Error: {str(e)}")
 
 async def generate_gift(query, user_id, points, context):
-    """Generate gift code - /gift command and button both work"""
+    """Generate gift code - No expiry"""
     if user_id != OWNER_ID and user_id not in ADMIN_IDS:
         await query.edit_message_text("❌ Unauthorized")
         return
@@ -509,19 +907,25 @@ async def generate_gift(query, user_id, points, context):
     gift_data = {
         "code": code,
         "points": points,
+        "value": points * POINT_PRICE,
         "created_by": user_id,
         "created_at": datetime.now(),
         "used_by": None,
         "used_at": None
-        # No expiry - never expires
+        # No expiry
     }
     gift_codes_col.insert_one(gift_data)
     
-    text = get_text(user_id, "gift_created", code=code, points=points)
+    text = UI["gift_created_admin"].format(
+        points=points,
+        value=points * POINT_PRICE,
+        code=code
+    )
+    
     await query.edit_message_text(text, parse_mode='Markdown')
 
 async def gift_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle /gift command - Create gift code"""
+    """Handle /gift command"""
     user_id = update.effective_user.id
     
     if user_id != OWNER_ID and user_id not in ADMIN_IDS:
@@ -542,15 +946,19 @@ async def gift_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         gift_data = {
             "code": code,
             "points": points,
+            "value": points * POINT_PRICE,
             "created_by": user_id,
             "created_at": datetime.now(),
             "used_by": None,
             "used_at": None
-            # No expiry
         }
         gift_codes_col.insert_one(gift_data)
         
-        text = get_text(user_id, "gift_created", code=code, points=points)
+        text = UI["gift_created_admin"].format(
+            points=points,
+            value=points * POINT_PRICE,
+            code=code
+        )
         await update.message.reply_text(text, parse_mode='Markdown')
         
     except ValueError:
@@ -575,7 +983,6 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle photo/screenshot messages"""
     user_id = update.effective_user.id
     
-    # Check if user was expecting to send screenshot
     package_key = context.user_data.get('pending_package')
     if not package_key:
         await update.message.reply_text("Please use /start first")
@@ -596,28 +1003,32 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     result = payments_col.insert_one(payment_data)
     payment_id = str(result.inserted_id)
     
-    # Forward screenshot to all admins with payment info
-    caption = f"💰 **New Payment Request**\n\n"
-    caption += f"👤 **User:** {user_id}\n"
-    caption += f"📝 **Name:** {update.effective_user.first_name}\n"
-    caption += f"🆔 **Username:** @{update.effective_user.username or 'None'}\n"
-    caption += f"💎 **Package:** {package_key} points\n"
-    caption += f"💵 **Amount:** ₹{package['price']}\n"
-    caption += f"🆔 **Payment ID:** `{payment_id}`\n"
-    caption += f"📅 **Time:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+    # Clear pending package
+    context.user_data['pending_package'] = None
     
-    # Create approve/reject buttons
-    keyboard = [
-        [
-            InlineKeyboardButton("✅ Approve", callback_data=f"approve_payment_{payment_id}"),
-            InlineKeyboardButton("❌ Reject", callback_data=f"reject_payment_{payment_id}")
-        ]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
+    # Forward to admins
     for admin_id in ADMIN_IDS:
         try:
-            # Send photo with caption and buttons
+            points = package['points']
+            
+            caption = UI["payment_request_admin"].format(
+                user_id=user_id,
+                name=update.effective_user.first_name,
+                username=update.effective_user.username or 'None',
+                points=points,
+                amount=package['price'],
+                time=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                payment_id=payment_id
+            )
+            
+            keyboard = [
+                [
+                    InlineKeyboardButton("✅ Approve", callback_data=f"approve_payment_{payment_id}"),
+                    InlineKeyboardButton("❌ Reject", callback_data=f"reject_payment_{payment_id}")
+                ]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
             await context.bot.send_photo(
                 chat_id=admin_id,
                 photo=update.message.photo[-1].file_id,
@@ -628,25 +1039,24 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             logger.error(f"Failed to forward to admin {admin_id}: {e}")
     
-    # Clear pending package
-    context.user_data['pending_package'] = None
-    
     # Confirm to user
-    await update.message.reply_text(get_text(user_id, "payment_request_sent"))
+    await update.message.reply_text(UI["payment_sent"], parse_mode='Markdown')
 
 async def check_user(update: Update, context: ContextTypes.DEFAULT_TYPE, user_id_to_check):
+    """Check user via API - UPDATED: 1 point per search"""
     user_id = update.effective_user.id
     
     user = users_col.find_one({"user_id": user_id})
-    if not user or user.get("points", 0) < 10:
+    if not user or user.get("points", 0) < CHECK_PRICE:
         await update.message.reply_text(
-            get_text(user_id, "insufficient_points", points=user.get("points", 0) if user else 0)
+            UI["insufficient_points"].format(points=user.get("points", 0) if user else 0),
+            parse_mode='Markdown'
         )
         context.user_data['action'] = None
         return
     
     try:
-        await update.message.reply_text(get_text(user_id, "processing"))
+        await update.message.reply_text("⏳ **Processing your request...**", parse_mode='Markdown')
         
         response = requests.post(
             API_URL,
@@ -660,51 +1070,51 @@ async def check_user(update: Update, context: ContextTypes.DEFAULT_TYPE, user_id
             if data.get("success") and data.get("data", {}).get("success"):
                 user_data = data["data"]
                 
-                new_points = user["points"] - 10
+                new_points = user["points"] - CHECK_PRICE
                 users_col.update_one(
                     {"user_id": user_id},
                     {"$set": {"points": new_points}, "$inc": {"total_used": 1}}
                 )
                 
-                result_text = get_text(
-                    user_id,
-                    "result",
+                result_text = UI["result"].format(
                     country=user_data.get("country", "N/A"),
                     code=user_data.get("country_code", "N/A"),
-                    number=user_data.get("number", "N/A")
+                    number=user_data.get("number", "N/A"),
+                    remaining=new_points
                 )
                 
-                # Send result message
-                sent_msg = await update.message.reply_text(result_text)
+                await update.message.reply_text(result_text, parse_mode='Markdown')
                 
-                # Store message ID for reaction (but don't send extra message)
-                context.user_data['reaction_for_message'] = sent_msg.message_id
-                
-                # Send points info
-                await update.message.reply_text(
-                    get_text(user_id, "points_deducted", points=10, remaining=new_points)
-                )
             else:
-                await update.message.reply_text(get_text(user_id, "no_user"))
+                await update.message.reply_text(
+                    "❌ **User not found in database**\n\nPlease check the ID and try again.",
+                    parse_mode='Markdown'
+                )
         else:
-            await update.message.reply_text(get_text(user_id, "error", error="API Error"))
+            await update.message.reply_text(
+                "❌ **API Error**\n\nPlease try again later or contact admin.",
+                parse_mode='Markdown'
+            )
             
     except Exception as e:
-        await update.message.reply_text(get_text(user_id, "error", error=str(e)))
+        await update.message.reply_text(
+            f"❌ **Error:** {str(e)}",
+            parse_mode='Markdown'
+        )
     
     context.user_data['action'] = None
 
 async def redeem_gift(update: Update, context: ContextTypes.DEFAULT_TYPE, code):
+    """Redeem gift code - No expiry"""
     user_id = update.effective_user.id
     
     gift = gift_codes_col.find_one({
         "code": code.strip().upper(),
         "used_by": None
-        # No expiry check - never expires
     })
     
     if not gift:
-        await update.message.reply_text(get_text(user_id, "gift_code_invalid"))
+        await update.message.reply_text(UI["gift_invalid"], parse_mode='Markdown')
         context.user_data['action'] = None
         return
     
@@ -721,12 +1131,16 @@ async def redeem_gift(update: Update, context: ContextTypes.DEFAULT_TYPE, code):
     )
     
     await update.message.reply_text(
-        get_text(user_id, "gift_code_success", points=gift["points"])
+        UI["gift_success"].format(
+            points=gift["points"],
+            value=gift["points"] * POINT_PRICE
+        ),
+        parse_mode='Markdown'
     )
-    # No reaction for gift redemption
     context.user_data['action'] = None
 
 async def contact_admin(update: Update, context: ContextTypes.DEFAULT_TYPE, message):
+    """Contact admin"""
     user_id = update.effective_user.id
     
     msg_data = {
@@ -752,7 +1166,7 @@ async def contact_admin(update: Update, context: ContextTypes.DEFAULT_TYPE, mess
         except:
             pass
     
-    await update.message.reply_text(get_text(user_id, "msg_sent"))
+    await update.message.reply_text(UI["msg_sent"], parse_mode='Markdown')
     context.user_data['action'] = None
 
 async def redeem_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -763,7 +1177,7 @@ async def redeem_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     code = context.args[0]
     await redeem_gift(update, context, code)
 
-# ==================== CONVERSATION HANDLER FOR SCREENSHOT ====================
+# ==================== CONVERSATION HANDLER ====================
 async def screenshot_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle screenshot in conversation"""
     if update.message.photo:
@@ -782,6 +1196,8 @@ def main():
     print(f"👥 Admins: {ADMIN_IDS}")
     print(f"💳 UPI ID: {UPI_ID}")
     print(f"💎 Points: 1 = ₹{POINT_PRICE}")
+    print(f"🔍 Search Cost: {CHECK_PRICE} Point")
+    print(f"📦 Packages: {len(POINT_PACKAGES)}")
     print("="*60)
     
     app = Application.builder().token(BOT_TOKEN).build()
