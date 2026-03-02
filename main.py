@@ -24,10 +24,14 @@ if not MONGO_URI:
     exit(1)
 
 # ==================== CONFIGURATION ====================
-BOT_TOKEN = "8432105036:AAE6BQDg9qcxdjeEkyr9G1QiQGuHhWVgMoI"
+BOT_TOKEN = "8432105036:AAF_hiRAwU7N2nCVWakv9pjb1zOT4yfc-zk"
 OWNER_ID = 7459756974
 ADMIN_IDS = [7459756974, 2011028235]
 ADMIN_USERNAME = "@VIP_X_OFFICIAL"  # Admin username with underscore
+
+# NEW API CONFIGURATION
+API_URL = "http://api.subhxcosmo.in/api"
+API_KEY = "suryanshHacker"  # API key from the URL
 
 # UPI ID for payments
 UPI_ID = "nanhin.3@ptaxis"
@@ -59,7 +63,6 @@ GIFT_PACKAGES = {
     "100": {"points": 100, "emoji": "👑"},
 }
 
-API_URL = "https://open-source-1.onrender.com/tg-user"
 REACTIONS = ["❤️‍🔥", "💀", "😈", "☠️", "💘", "💝", "💕", "💞", "💓", "💗"]
 
 # Conversation states
@@ -1101,7 +1104,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(UI["payment_sent"].format(admin=ADMIN_USERNAME), parse_mode='Markdown')
 
 async def check_user(update: Update, context: ContextTypes.DEFAULT_TYPE, user_id_to_check):
-    """Check user via API"""
+    """Check user via NEW API"""
     user_id = update.effective_user.id
     
     user = users_col.find_one({"user_id": user_id})
@@ -1119,17 +1122,25 @@ async def check_user(update: Update, context: ContextTypes.DEFAULT_TYPE, user_id
     try:
         await update.message.reply_text("⏳ **Processing your request...**", parse_mode='Markdown')
         
-        response = requests.post(
+        # NEW API CALL
+        params = {
+            "key": API_KEY,
+            "type": "sms",
+            "term": user_id_to_check
+        }
+        
+        response = requests.get(
             API_URL,
-            json={"userId": user_id_to_check},
+            params=params,
             headers={"Content-Type": "application/json"},
             timeout=10
         )
         
         if response.status_code == 200:
             data = response.json()
-            if data.get("success") and data.get("data", {}).get("success"):
-                user_data = data["data"]
+            # Check the nested result structure
+            if data.get("success") and data.get("result", {}).get("success"):
+                result_data = data["result"]
                 
                 new_points = user["points"] - CHECK_PRICE
                 users_col.update_one(
@@ -1138,17 +1149,18 @@ async def check_user(update: Update, context: ContextTypes.DEFAULT_TYPE, user_id
                 )
                 
                 result_text = UI["result"].format(
-                    country=user_data.get("country", "N/A"),
-                    code=user_data.get("country_code", "N/A"),
-                    number=user_data.get("number", "N/A"),
+                    country=result_data.get("country", "N/A"),
+                    code=result_data.get("country_code", "N/A"),
+                    number=result_data.get("number", "N/A"),
                     remaining=new_points
                 )
                 
                 await update.message.reply_text(result_text, parse_mode='Markdown')
                 
             else:
+                error_msg = data.get("result", {}).get("msg", "User not found")
                 await update.message.reply_text(
-                    "❌ **User not found in database**\n\nPlease check the ID and try again.",
+                    f"❌ **{error_msg}**\n\nPlease check the ID and try again.",
                     parse_mode='Markdown'
                 )
         else:
@@ -1331,6 +1343,7 @@ def main():
     print(f"🎁 Welcome Bonus: {WELCOME_BONUS} Points")
     print(f"🔍 Search Cost: {CHECK_PRICE} Point")
     print(f"📦 Packages: {len(POINT_PACKAGES)}")
+    print(f"🌐 New API: {API_URL}")
     print("="*60)
     
     app = Application.builder().token(BOT_TOKEN).build()
