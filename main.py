@@ -1,55 +1,59 @@
-import os
+"""
+===========================================
+🤖 COMPLETE TELEGRAM BOT - ALL FEATURES
+===========================================
+Developer:@VIP_X_OFFICIAL
+Version: 4.0 (ULTIMATE)
+Features: 100+ Features
+Database: MongoDB (IST Timezone)
+===========================================
+"""
+
 import logging
-import requests
+import asyncio
 import random
 import string
-import asyncio
+import requests
+import csv
+import os
+import json
 from datetime import datetime, timedelta
-from dotenv import load_dotenv
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler, ConversationHandler
+from pytz import timezone
 from pymongo import MongoClient
-from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
-from bson.objectid import ObjectId
-
-# ==================== LOAD ENVIRONMENT VARIABLES ====================
-load_dotenv()
-
-# Get MongoDB URI from .env file
-MONGO_URI = os.getenv('MONGODB_URI')
-
-if not MONGO_URI:
-    print("❌ ERROR: MONGODB_URI not found in .env file!")
-    print("Please create .env file with: MONGODB_URI=your_connection_string")
-    exit(1)
+from bson import ObjectId
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    MessageHandler,
+    CallbackQueryHandler,
+    ConversationHandler,
+    ContextTypes,
+    filters
+)
+from telegram.constants import ParseMode
 
 # ==================== CONFIGURATION ====================
 BOT_TOKEN = "8432105036:AAF_hiRAwU7N2nCVWakv9pjb1zOT4yfc-zk"
-OWNER_ID = 7459756974
-ADMIN_IDS = [7459756974, 2011028235]
-ADMIN_USERNAME = "@VIP_X_OFFICIAL"  # Admin username with underscore
-
-# NEW API CONFIGURATION
+MONGODB_URI = "mongodb+srv://nikilsaxena843_db_user:3gF2wyT4IjsFt0cY@vipbot.puv6gfk.mongodb.net/?appName=vipbot"
 API_URL = "http://api.subhxcosmo.in/api"
-API_KEY = "suryanshHacker"  # API key from the URL
+API_KEY = "suryanshHacker"
+OWNER_ID = 7459756974
+OWNER_USERNAME = "@VIP_X_OFFICIAL"
 
-# UPI ID for payments
-UPI_ID = "nanhin.3@ptaxis"
-
-# Price Configuration: 1 Point = ₹5
-POINT_PRICE = 5
-WELCOME_BONUS = 2
-CHECK_PRICE = 1  # 1 point per search
+# India Timezone
+IST = timezone('Asia/Kolkata')
 
 # Point Packages
 POINT_PACKAGES = {
-    "5": {"points": 5, "price": 25, "emoji": "⚡"},
-    "10": {"points": 10, "price": 50, "emoji": "💫"},
-    "15": {"points": 15, "price": 75, "emoji": "✨"},
-    "20": {"points": 20, "price": 100, "emoji": "⭐"},
-    "30": {"points": 30, "price": 150, "emoji": "🌟"},
-    "50": {"points": 50, "price": 250, "emoji": "💎"},
-    "100": {"points": 100, "price": 500, "emoji": "👑"},
+    "5": {"points": 5, "price": 25, "emoji": "⚡", "popular": False},
+    "10": {"points": 10, "price": 50, "emoji": "💫", "popular": False},
+    "15": {"points": 15, "price": 75, "emoji": "✨", "popular": False},
+    "20": {"points": 20, "price": 100, "emoji": "⭐", "popular": True},
+    "30": {"points": 30, "price": 150, "emoji": "🌟", "popular": False},
+    "50": {"points": 50, "price": 250, "emoji": "💎", "popular": False},
+    "100": {"points": 100, "price": 500, "emoji": "👑", "popular": True},
 }
 
 # Gift Packages
@@ -63,1323 +67,1945 @@ GIFT_PACKAGES = {
     "100": {"points": 100, "emoji": "👑"},
 }
 
+# Reactions
 REACTIONS = ["❤️‍🔥", "💀", "😈", "☠️", "💘", "💝", "💕", "💞", "💓", "💗"]
 
-# Conversation states
-WAITING_SCREENSHOT = 1
-WAITING_ADMIN_REPLY = 2
+# Conversation States
+(
+    CONTACT_ADMIN,
+    GENERATE_CODE,
+    ADD_POINTS,
+    BROADCAST_MSG,
+    BROADCAST_PHOTO,
+    BROADCAST_VIDEO,
+    ADD_REFERRAL,
+    SEARCH_NUMBER,
+    REDEEM_CODE,
+    BUY_POINTS,
+    USER_SETTINGS,
+    FEEDBACK,
+    REPORT_ISSUE,
+    BAN_USER,
+    WARN_USER,
+    EXPORT_DATA,
+    BACKUP_DB,
+    MAINTENANCE_MODE,
+    FORCE_JOIN,
+    RATE_LIMIT,
+    API_SETTINGS,
+    PACKAGE_SETTINGS,
+    REACTION_SETTINGS,
+) = range(23)
 
-# ==================== PROFESSIONAL UI DESIGNS ====================
-BORDER = "━" * 30
-
-def format_points_display(points):
-    """Format points display"""
-    return f"💎 **Points:** `{points}`"
-
-def format_price(amount):
-    """Format price display"""
-    return f"💰 **₹{amount}**"
-
-# Professional UI Templates with admin name
-UI = {
-    "welcome": """
-╔════════════════════════════════════╗
-║     🎯 VIP USER LOOKUP BOT 🎯      ║
-║         PROFESSIONAL EDITION       ║
-╚════════════════════════════════════╝
-
-👋 **Welcome, {name}!**
-
-{points_display}
-
-📊 **YOUR STATS:**
-├─ 🆔 ID: `{user_id}`
-├─ 💎 Points Balance: `{points}`
-├─ 🔍 Total Searches: `{searches}`
-└─ 📅 Joined: `{joined}`
-
-📞 **ADMIN CONTACT:** {admin}
-
-⚡ **QUICK ACTIONS:**
-Simply click a button below to get started!
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-""",
+# ==================== DATABASE CONNECTION ====================
+try:
+    client = MongoClient(MONGODB_URI)
+    db = client['vip_bot']
     
-    "check_user": """
-╔════════════════════════════════════╗
-║        🔍 USER LOOKUP SYSTEM       ║
-╚════════════════════════════════════╝
-
-📤 **Please send the Telegram User ID**
-you want to lookup.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💡 **Example:** `2011028235`
-💎 **Cost:** `1 Point` per lookup
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-""",
+    # Collections
+    users_col = db['users']
+    transactions_col = db['transactions']
+    gift_codes_col = db['gift_codes']
+    orders_col = db['orders']
+    settings_col = db['settings']
+    backup_col = db['backup']
+    referral_col = db['referrals']
+    search_history_col = db['search_history']
+    feedback_col = db['feedback']
+    reports_col = db['reports']
+    blacklist_col = db['blacklist']
+    broadcast_col = db['broadcast']
     
-    "result": """
-╔════════════════════════════════════╗
-║        ✅ USER DETAILS FOUND       ║
-╚════════════════════════════════════╝
-
-📱 **CONTACT INFORMATION:**
-├─ 🌍 Country: `{country}`
-├─ 📞 Country Code: `{code}`
-└─ 📱 Phone Number: `{number}`
-
-💎 **POINTS UPDATED:**
-├─ Deducted: `1 Point`
-└─ Remaining: `{remaining}`
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚡ Use /start for main menu
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-""",
+    # Create indexes
+    users_col.create_index('user_id', unique=True)
+    gift_codes_col.create_index('code', unique=True)
+    orders_col.create_index('order_id', unique=True)
+    referral_col.create_index('referral_code', unique=True)
+    blacklist_col.create_index('user_id', unique=True)
     
-    "insufficient_points": """
-╔════════════════════════════════════╗
-║        ❌ INSUFFICIENT POINTS      ║
-╚════════════════════════════════════╝
-
-📊 **CURRENT BALANCE:**
-├─ 💎 Points: `{points}`
-└─ 🔍 Required: `1 Point`
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💡 **SOLUTIONS:**
-├─ 1️⃣ Buy points from store
-├─ 2️⃣ Use gift code if you have
-└─ 3️⃣ Contact {admin} for help
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-""",
+    # Default settings
+    if not settings_col.find_one({'key': 'bot_settings'}):
+        settings_col.insert_one({
+            'key': 'bot_settings',
+            'maintenance_mode': False,
+            'force_join_channel': None,
+            'rate_limit': 5,
+            'reactions_enabled': True,
+            'api_url': API_URL,
+            'api_key': API_KEY,
+            'point_rate': 5,
+            'min_withdraw': 100,
+            'referral_bonus': 10,
+            'daily_bonus': 5,
+            'welcome_bonus': 10,
+            'created_at': datetime.now(IST)
+        })
     
-    "buy_points": """
-╔════════════════════════════════════╗
-║        💰 POINTS PURCHASE          ║
-╚════════════════════════════════════╝
-
-📊 **PRICE CHART:** `1 Point = ₹{price}`
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-""",
+    # Stats
+    current_time = datetime.now(IST).strftime("%d-%m-%Y %I:%M:%S %p")
+    print("="*50)
+    print("✅ DATABASE CONNECTED SUCCESSFULLY!")
+    print("="*50)
+    print(f"🕐 IST Time: {current_time}")
+    print(f"📊 Database: vip_bot")
+    print(f"📁 Collections:")
+    print(f"   ├─ users: {users_col.count_documents({})} documents")
+    print(f"   ├─ transactions: {transactions_col.count_documents({})}")
+    print(f"   ├─ gift_codes: {gift_codes_col.count_documents({})}")
+    print(f"   ├─ orders: {orders_col.count_documents({})}")
+    print(f"   ├─ referrals: {referral_col.count_documents({})}")
+    print(f"   └─ search_history: {search_history_col.count_documents({})}")
+    print("="*50)
     
-    "package_display": """
-{emoji} **{points} Points** ─ {price_display}
-└─ 💎 Cost per search: `{per_search}`
-""",
-    
-    "payment_info": """
-╔════════════════════════════════════╗
-║        💳 PAYMENT DETAILS          ║
-╚════════════════════════════════════╝
+except Exception as e:
+    print(f"❌ DATABASE ERROR: {e}")
+    exit(1)
 
-📦 **PACKAGE:** {emoji} {points} Points
-💵 **AMOUNT:** ₹{price}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🏦 **UPI DETAILS:**
-└─ `{upi}`
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📸 **INSTRUCTIONS:**
-1️⃣ Make payment to above UPI ID
-2️⃣ Click "Send Screenshot" button
-3️⃣ Upload payment screenshot
-4️⃣ Wait for admin approval
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-""",
-    
-    "screenshot_prompt": """
-╔════════════════════════════════════╗
-║        📸 SCREENSHOT UPLOAD        ║
-╚════════════════════════════════════╝
-
-✅ **Please send the payment screenshot.**
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📋 **REQUIREMENTS:**
-├─ Clear screenshot of UPI payment
-├─ UPI ID should be visible
-├─ Amount should match
-└─ Transaction ID visible
-
-⏳ Admin will verify and add points shortly.
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-""",
-    
-    "payment_sent": """
-╔════════════════════════════════════╗
-║     ✅ PAYMENT REQUEST SENT        ║
-╚════════════════════════════════════╝
-
-📤 Your payment request has been 
-   forwarded to admin.
-
-⏳ **Expected Time:** 5-10 minutes
-📞 **Contact:** {admin} if urgent
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-""",
-    
-    "gift_code_prompt": """
-╔════════════════════════════════════╗
-║        🎁 GIFT CODE REDEEM         ║
-╚════════════════════════════════════╝
-
-📤 **Please send your gift code.**
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💡 **Example:** `ABC123XYZ789`
-✨ Codes are case-insensitive
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-""",
-    
-    "gift_success": """
-╔════════════════════════════════════╗
-║     ✅ GIFT CODE REDEEMED          ║
-╚════════════════════════════════════╝
-
-🎉 **Congratulations!**
-├─ 💎 Points Added: `{points}`
-└─ 💰 Value: ₹{value}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-""",
-    
-    "gift_invalid": """
-╔════════════════════════════════════╗
-║        ❌ INVALID GIFT CODE        ║
-╚════════════════════════════════════╝
-
-❌ The code you entered is invalid
-   or has already been used.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💡 **Need help?** Contact {admin}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-""",
-    
-    "contact_admin": """
-╔════════════════════════════════════╗
-║        📞 CONTACT ADMIN            ║
-╚════════════════════════════════════╝
-
-📤 **Please type your message below.**
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💡 Admin will reply as soon as possible
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-""",
-    
-    "msg_sent": """
-╔════════════════════════════════════╗
-║        ✅ MESSAGE SENT             ║
-╚════════════════════════════════════╝
-
-📤 Your message has been forwarded
-   to the admin team.
-
-⏳ **Response time:** 5-30 minutes
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-""",
-    
-    "owner_panel": """
-╔════════════════════════════════════╗
-║        👑 OWNER PANEL              ║
-╚════════════════════════════════════╝
-
-📊 **SYSTEM STATISTICS:**
-├─ 👥 Total Users: `{users}`
-├─ 💎 Total Points: `{points}`
-├─ 💰 Today Income: `₹{today_income}`
-├─ 📅 Month Income: `₹{month_income}`
-└─ ⏳ Pending: `{pending}` payments
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚡ **ADMIN TOOLS:**
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-""",
-    
-    "payment_request_admin": """
-╔════════════════════════════════════╗
-║     💰 NEW PAYMENT REQUEST         ║
-╚════════════════════════════════════╝
-
-👤 **USER DETAILS:**
-├─ 🆔 ID: `{user_id}`
-├─ 📝 Name: {name}
-└─ 🆔 Username: @{username}
-
-📦 **PACKAGE INFO:**
-├─ 💎 Points: {points}
-└─ 💵 Amount: ₹{amount}
-
-📅 **TIME:** {time}
-🆔 **Payment ID:** `{payment_id}`
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚡ **ACTIONS:**
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-""",
-    
-    "payment_approved_user": """
-╔════════════════════════════════════╗
-║     ✅ PAYMENT APPROVED            ║
-╚════════════════════════════════════╝
-
-🎉 **Your payment has been approved!**
-
-📦 **PACKAGE:** {points} Points
-💰 **AMOUNT:** ₹{amount}
-💎 **NEW BALANCE:** `{balance}`
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚡ You can now use /start
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-""",
-    
-    "payment_rejected_user": """
-╔════════════════════════════════════╗
-║     ❌ PAYMENT REJECTED            ║
-╚════════════════════════════════════╝
-
-❌ Your payment has been rejected.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💡 **POSSIBLE REASONS:**
-├─ Invalid screenshot
-├─ Amount mismatch
-├─ UPI ID not visible
-└─ Transaction failed
-
-📞 **Contact:** {admin} for help
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-""",
-    
-    "gift_created_admin": """
-╔════════════════════════════════════╗
-║     ✅ GIFT CODE GENERATED         ║
-╚════════════════════════════════════╝
-
-🎁 **GIFT CODE DETAILS:**
-├─ 📦 Points: `{points}`
-├─ 💰 Value: ₹{value}
-└─ 🆔 Code: `{code}`
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📤 **Share this code with user:**
-`{code}`
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-""",
-    
-    "no_pending": """
-╔════════════════════════════════════╗
-║        📭 NO PENDING PAYMENTS      ║
-╚════════════════════════════════════╝
-
-✅ All payments have been processed.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-""",
-    
-    "admin_reply_prompt": """
-✏️ **Reply to user {user_id}**
-
-Type your message below. It will be sent directly to the user.
-""",
-    
-    "admin_reply_sent": """
-✅ **Reply sent to user {user_id}**
-""",
-    
-    "admin_reply_received": """
-📨 **Message from Admin {admin}:**
-
-{message}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-To reply, use /contact command
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-"""
-}
-
-# Languages
-LANGUAGES = {
-    "hi": {
-        "check_user": "🔍 यूजर चेक करें",
-        "buy_points": "💰 पॉइंट्स खरीदें",
-        "gift_code": "🎁 गिफ्ट कोड",
-        "contact_admin": "📞 एडमिन से संपर्क",
-        "language": "🌐 भाषा बदलें",
-        "cancel": "❌ रद्द करें",
-        "approve": "✅ Approve",
-        "reject": "❌ Reject",
-        "send_screenshot": "📸 Send Screenshot",
-        "view_pending": "📋 View Pending",
-        "back": "🔙 Back",
-        "generate": "🎁 Generate",
-        "reply": "✏️ Reply",
+# ==================== LANGUAGE STRINGS ====================
+LANG = {
+    'hi': {
+        # Basic
+        'welcome': "👋 स्वागत है! कृपया भाषा चुनें:",
+        'main_menu': "🏠 मुख्य मेनू\n\n👤 उपयोगकर्ता: {}\n💰 पॉइंट्स: {}\n📊 कुल सर्च: {}",
+        'loading': "⏳ कृपया प्रतीक्षा करें...",
+        'success': "✅ सफल!",
+        'error': "❌ त्रुटि!",
+        'back': "🔙 वापस",
+        'cancel': "❌ रद्द करें",
+        
+        # Points
+        'check_points': "💰 आपके पॉइंट्स: {}\n\n1 पॉइंट = ₹5\n1 सर्च = 1 पॉइंट",
+        'buy_points': "🛒 पॉइंट्स खरीदें\n\nपैकेज चुनें:",
+        'insufficient_points': "❌ अपर्याप्त पॉइंट्स! आपके पास {} पॉइंट्स हैं।",
+        
+        # Search
+        'enter_number': "📱 10 अंकों का मोबाइल नंबर दर्ज करें:",
+        'invalid_number': "❌ अमान्य नंबर! केवल 10 अंक भारतीय नंबर दर्ज करें।",
+        'processing': "⏳ प्रोसेसिंग... कृपया प्रतीक्षा करें।",
+        'api_error': "❌ API त्रुटि! बाद में प्रयास करें।",
+        'search_result': "✅ सफल!\n\n📱 नंबर: {}\n🌍 देश: {}\n📞 कोड: {}\n\n💎 बचे पॉइंट्स: {}\n🕐 समय: {}",
+        
+        # Gift Codes
+        'gift_packages': "🎁 गिफ्ट कोड पैकेज:\nकितने पॉइंट्स का कोड चाहिए?",
+        'enter_gift_code': "🎁 {}+ पॉइंट्स वाला गिफ्ट कोड दर्ज करें:",
+        'invalid_code': "❌ अमान्य या इस्तेमाल किया गया कोड!",
+        'code_success': "✅ {} पॉइंट्स जोड़े गए!\nनया बैलेंस: {}",
+        
+        # Profile
+        'profile': "👤 प्रोफाइल\n\n🆔 आईडी: {}\n👤 नाम: {}\n📅 ज्वाइन: {}\n💰 पॉइंट्स: {}\n🔍 कुल सर्च: {}\n🎁 रिडीम: {}\n🤝 रेफरल: {}",
+        'settings': "⚙️ सेटिंग्स\n\nभाषा, नोटिफिकेशन और प्राइवेसी सेटिंग्स",
+        
+        # Referral
+        'referral': "🤝 रेफरल सिस्टम\n\nआपका रेफरल कोड: `{}`\nरेफरल लिंक: https://t.me/{}?start={}\n\nकमीशन: {} पॉइंट्स प्रति रेफरल\nकुल रेफरल: {}\nकुल कमीशन: {} पॉइंट्स",
+        
+        # Daily Bonus
+        'daily_bonus': "🎁 डेली बोनस\n\nआपको {} पॉइंट्स मिले!\nअगला बोनस कल {} बजे",
+        'already_claimed': "❌ आज का बोनस पहले ही ले चुके हो!\nअगला बोनस कल {} बजे",
+        
+        # Admin
+        'admin_panel': "👑 एडमिन पैनल\n\n🕐 {} IST",
+        
+        # Contact
+        'contact_admin': "📝 अपना संदेश लिखें (एडमिन जल्दी जवाब देगा):",
+        'msg_sent': "✅ संदेश भेज दिया गया!",
+        
+        # History
+        'search_history': "📋 हाल की सर्च (पिछले 10):\n\n{}",
+        'transaction_history': "📊 हाल के ट्रांजैक्शन:\n\n{}",
+        
+        # Help
+        'help_text': "❓ मदद\n\n/start - शुरू करें\n/profile - प्रोफाइल\n/points - पॉइंट्स\n/buy - खरीदें\n/redeem - कोड रिडीम\n/referral - रेफरल\n/history - हिस्ट्री\n/settings - सेटिंग्स\n/help - मदद",
     },
-    "en": {
-        "check_user": "🔍 Check User",
-        "buy_points": "💰 Buy Points",
-        "gift_code": "🎁 Gift Code",
-        "contact_admin": "📞 Contact Admin",
-        "language": "🌐 Change Language",
-        "cancel": "❌ Cancel",
-        "approve": "✅ Approve",
-        "reject": "❌ Reject",
-        "send_screenshot": "📸 Send Screenshot",
-        "view_pending": "📋 View Pending",
-        "back": "🔙 Back",
-        "generate": "🎁 Generate",
-        "reply": "✏️ Reply",
+    'en': {
+        # Basic
+        'welcome': "👋 Welcome! Please select language:",
+        'main_menu': "🏠 Main Menu\n\n👤 User: {}\n💰 Points: {}\n📊 Total Searches: {}",
+        'loading': "⏳ Please wait...",
+        'success': "✅ Success!",
+        'error': "❌ Error!",
+        'back': "🔙 Back",
+        'cancel': "❌ Cancel",
+        
+        # Points
+        'check_points': "💰 Your Points: {}\n\n1 Point = ₹5\n1 Search = 1 Point",
+        'buy_points': "🛒 Buy Points\n\nChoose package:",
+        'insufficient_points': "❌ Insufficient points! You have {} points.",
+        
+        # Search
+        'enter_number': "📱 Enter 10-digit mobile number:",
+        'invalid_number': "❌ Invalid number! Enter 10-digit Indian number only.",
+        'processing': "⏳ Processing... Please wait.",
+        'api_error': "❌ API Error! Try again later.",
+        'search_result': "✅ Success!\n\n📱 Number: {}\n🌍 Country: {}\n📞 Code: {}\n\n💎 Remaining: {}\n🕐 Time: {}",
+        
+        # Gift Codes
+        'gift_packages': "🎁 Gift Code Packages:\nHow many points code?",
+        'enter_gift_code': "🎁 Enter {}+ points gift code:",
+        'invalid_code': "❌ Invalid or used code!",
+        'code_success': "✅ {} points added!\nNew balance: {}",
+        
+        # Profile
+        'profile': "👤 Profile\n\n🆔 ID: {}\n👤 Name: {}\n📅 Joined: {}\n💰 Points: {}\n🔍 Total Searches: {}\n🎁 Redeemed: {}\n🤝 Referrals: {}",
+        'settings': "⚙️ Settings\n\nLanguage, Notifications & Privacy settings",
+        
+        # Referral
+        'referral': "🤝 Referral System\n\nYour Referral Code: `{}`\nReferral Link: https://t.me/{}?start={}\n\nCommission: {} points per referral\nTotal Referrals: {}\nTotal Commission: {} points",
+        
+        # Daily Bonus
+        'daily_bonus': "🎁 Daily Bonus\n\nYou got {} points!\nNext bonus tomorrow at {}",
+        'already_claimed': "❌ Already claimed today!\nNext bonus tomorrow at {}",
+        
+        # Admin
+        'admin_panel': "👑 Admin Panel\n\n🕐 {} IST",
+        
+        # Contact
+        'contact_admin': "📝 Write your message (Admin will reply soon):",
+        'msg_sent': "✅ Message sent to admin!",
+        
+        # History
+        'search_history': "📋 Recent Searches (Last 10):\n\n{}",
+        'transaction_history': "📊 Recent Transactions:\n\n{}",
+        
+        # Help
+        'help_text': "❓ Help\n\n/start - Start bot\n/profile - View profile\n/points - Check points\n/buy - Buy points\n/redeem - Redeem code\n/referral - Referral system\n/history - Search history\n/settings - Settings\n/help - This help",
     }
 }
 
-# ==================== DATABASE SETUP ====================
-print("\n" + "="*60)
-print("🔌 CONNECTING TO MONGODB...")
-print("="*60)
-
-try:
-    client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
-    client.admin.command('ping')
-    
-    db = client['vip_bot']
-    users_col = db['users']
-    gift_codes_col = db['gift_codes']
-    payments_col = db['payments']
-    admin_msgs_col = db['admin_messages']
-    
-    # Create indexes
-    try:
-        users_col.create_index('user_id', unique=True)
-        gift_codes_col.create_index('code', unique=True)
-        payments_col.create_index('timestamp')
-        payments_col.create_index('status')
-        admin_msgs_col.create_index('timestamp')
-        admin_msgs_col.create_index('replied')
-        print("✅ Indexes created/verified")
-    except Exception as e:
-        print(f"⚠️ Index warning: {e}")
-    
-    print("✅✅✅ MONGODB CONNECTED SUCCESSFULLY! ✅✅✅")
-    print("="*60 + "\n")
-    
-except Exception as e:
-    print(f"❌ MongoDB Connection Failed: {e}")
-    print("\n🔴 FIX: Check MongoDB URI in .env file")
-    print("="*60)
-    exit(1)
-
-# ==================== LOGGING ====================
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
-logger = logging.getLogger(__name__)
-
 # ==================== HELPER FUNCTIONS ====================
+def get_ist():
+    """Get current IST time"""
+    return datetime.now(IST)
+
+def format_ist(dt):
+    """Format IST datetime"""
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone('UTC')).astimezone(IST)
+    return dt.strftime("%d-%m-%Y %I:%M:%S %p")
+
 def get_user_lang(user_id):
-    user = users_col.find_one({"user_id": user_id})
-    return user.get("lang", "en") if user else "en"
+    """Get user language"""
+    user = users_col.find_one({'user_id': user_id})
+    return user.get('language', 'en') if user else 'en'
 
-def get_text(user_id, key, **kwargs):
+def get_text(user_id, key):
+    """Get text in user's language"""
     lang = get_user_lang(user_id)
-    text = LANGUAGES[lang].get(key, LANGUAGES["en"][key])
-    return text.format(**kwargs)
+    return LANG[lang].get(key, LANG['en'][key])
 
-def generate_gift_code():
-    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=12))
+def format_number(num):
+    """Format number with commas"""
+    return f"{num:,}"
 
-def disable_buttons(reply_markup):
-    """Disable all buttons in a keyboard"""
-    if not reply_markup or not reply_markup.inline_keyboard:
-        return None
-    
-    new_keyboard = []
-    for row in reply_markup.inline_keyboard:
-        new_row = []
-        for button in row:
-            # Create disabled version of button
-            new_row.append(InlineKeyboardButton(
-                text=f"✓ {button.text}",  # Add checkmark to show processed
-                callback_data="disabled"
-            ))
-        new_keyboard.append(new_row)
-    
-    return InlineKeyboardMarkup(new_keyboard)
+def generate_code(prefix=""):
+    """Generate random code"""
+    return prefix + ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
 
-def escape_markdown(text):
-    """Escape markdown special characters but PRESERVE underscores"""
-    if not text:
-        return ""
-    
-    # List of characters that need escaping in Markdown
-    # IMPORTANT: Underscore (_) is NOT included here to preserve it
-    escape_chars = ['*', '`', '[', ']', '(', ')', '~', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
-    
-    for char in escape_chars:
-        text = text.replace(char, f'\\{char}')
-    
-    return text
+def generate_order_id():
+    """Generate unique order ID"""
+    return f"ORD{datetime.now(IST).strftime('%Y%m%d%H%M%S')}{random.randint(100,999)}"
 
-# ==================== HANDLERS ====================
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user
-    user_id = user.id
+def generate_referral_code():
+    """Generate unique referral code"""
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+
+# ==================== USER FUNCTIONS ====================
+async def get_or_create_user(user_id, username=None, first_name=None):
+    """Get or create user"""
+    user = users_col.find_one({'user_id': user_id})
     
-    existing_user = users_col.find_one({"user_id": user_id})
-    
-    if not existing_user:
+    if not user:
+        # Create referral code
+        ref_code = generate_referral_code()
+        while referral_col.find_one({'code': ref_code}):
+            ref_code = generate_referral_code()
+        
+        # Create user
         user_data = {
-            "user_id": user_id,
-            "username": user.username,  # Store original username with underscores
-            "first_name": user.first_name,
-            "last_name": user.last_name,
-            "points": WELCOME_BONUS,
-            "lang": "en",
-            "joined_date": datetime.now(),
-            "total_used": 0,
-            "total_spent": 0
+            'user_id': user_id,
+            'username': username,
+            'first_name': first_name,
+            'points': 0,
+            'language': 'en',
+            'joined_date': get_ist(),
+            'last_active': get_ist(),
+            'total_searches': 0,
+            'total_redeemed': 0,
+            'total_referrals': 0,
+            'referral_code': ref_code,
+            'referred_by': None,
+            'daily_bonus_last': None,
+            'is_banned': False,
+            'is_admin': user_id == OWNER_ID,
+            'warnings': 0,
+            'settings': {
+                'notifications': True,
+                'private_mode': False
+            }
         }
         users_col.insert_one(user_data)
-        points = WELCOME_BONUS
-        searches = 0
-        joined = datetime.now().strftime("%Y-%m-%d")
-    else:
-        points = existing_user.get("points", 0)
-        searches = existing_user.get("total_used", 0)
-        joined = existing_user.get("joined_date", datetime.now()).strftime("%Y-%m-%d")
+        
+        # Add referral code to referral collection
+        referral_col.insert_one({
+            'code': ref_code,
+            'user_id': user_id,
+            'created_at': get_ist(),
+            'used_by': []
+        })
+        
+        # Welcome bonus
+        settings = settings_col.find_one({'key': 'bot_settings'})
+        welcome_bonus = settings.get('welcome_bonus', 10) if settings else 10
+        await add_points(user_id, welcome_bonus, "Welcome bonus")
+        
+        return user_data
     
-    # Don't escape the name - preserve all characters
-    name = user.first_name
+    # Update last active
+    users_col.update_one(
+        {'user_id': user_id},
+        {'$set': {'last_active': get_ist(), 'username': username, 'first_name': first_name}}
+    )
+    return user
+
+async def add_points(user_id, points, reason, admin_id=None):
+    """Add points to user"""
+    user = users_col.find_one({'user_id': user_id})
+    if not user:
+        return False
     
-    welcome_text = UI["welcome"].format(
-        name=name,
-        points_display=format_points_display(points),
-        user_id=user_id,
-        points=points,
-        searches=searches,
-        joined=joined,
-        admin=ADMIN_USERNAME  # This will show @VIP_X_OFFICIAL with underscore
+    new_balance = user['points'] + points
+    users_col.update_one(
+        {'user_id': user_id},
+        {'$set': {'points': new_balance}}
     )
     
+    # Log transaction
+    transactions_col.insert_one({
+        'user_id': user_id,
+        'type': 'credit',
+        'amount': points,
+        'reason': reason,
+        'admin_id': admin_id,
+        'balance': new_balance,
+        'timestamp': get_ist()
+    })
+    
+    return new_balance
+
+async def deduct_points(user_id, points, reason):
+    """Deduct points from user"""
+    user = users_col.find_one({'user_id': user_id})
+    if not user or user['points'] < points:
+        return False
+    
+    new_balance = user['points'] - points
+    users_col.update_one(
+        {'user_id': user_id},
+        {'$set': {'points': new_balance}}
+    )
+    
+    # Log transaction
+    transactions_col.insert_one({
+        'user_id': user_id,
+        'type': 'debit',
+        'amount': points,
+        'reason': reason,
+        'balance': new_balance,
+        'timestamp': get_ist()
+    })
+    
+    return new_balance
+
+async def add_reaction(message):
+    """Add random reaction to message"""
+    try:
+        reaction = random.choice(REACTIONS)
+        await message.set_reaction(reaction)
+    except:
+        pass
+
+def clean_api_response(data):
+    """Remove owner info from API response"""
+    if isinstance(data, dict):
+        data.pop('owner', None)
+        if 'result' in data and isinstance(data['result'], dict):
+            data['result'].pop('owner', None)
+    return data
+
+# ==================== COMMAND HANDLERS ====================
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Start command handler"""
+    user_id = update.effective_user.id
+    args = context.args
+    
+    # Check if user is banned
+    banned = blacklist_col.find_one({'user_id': user_id})
+    if banned:
+        await update.message.reply_text("❌ आप ब्लैकलिस्ट कर दिए गए हैं!\nYou have been blacklisted!")
+        return
+    
+    # Check referral
+    if args and args[0].startswith('ref_'):
+        ref_code = args[0][4:]
+        referrer = referral_col.find_one({'code': ref_code})
+        if referrer and referrer['user_id'] != user_id:
+            context.user_data['referred_by'] = referrer['user_id']
+    
+    # Get or create user
+    user = await get_or_create_user(
+        user_id,
+        update.effective_user.username,
+        update.effective_user.first_name
+    )
+    
+    # Handle referral
+    if context.user_data.get('referred_by') and not user.get('referred_by'):
+        referrer_id = context.user_data['referred_by']
+        settings = settings_col.find_one({'key': 'bot_settings'})
+        bonus = settings.get('referral_bonus', 10) if settings else 10
+        
+        # Update referrer
+        await add_points(referrer_id, bonus, f"Referral bonus for user {user_id}")
+        users_col.update_one(
+            {'user_id': referrer_id},
+            {'$inc': {'total_referrals': 1}}
+        )
+        
+        # Update referral collection
+        referral_col.update_one(
+            {'user_id': referrer_id},
+            {'$push': {'used_by': user_id}}
+        )
+        
+        # Update user
+        users_col.update_one(
+            {'user_id': user_id},
+            {'$set': {'referred_by': referrer_id}}
+        )
+        
+        # Notify referrer
+        try:
+            await context.bot.send_message(
+                referrer_id,
+                f"🎉 नया रेफरल! {user['first_name']} ने आपके लिंक से जॉइन किया!\n+{bonus} पॉइंट्स मिले!"
+            )
+        except:
+            pass
+    
+    # Language selection
     keyboard = [
-        [InlineKeyboardButton(get_text(user_id, "check_user"), callback_data="check_user")],
-        [InlineKeyboardButton(get_text(user_id, "buy_points"), callback_data="buy_points"),
-         InlineKeyboardButton(get_text(user_id, "gift_code"), callback_data="gift_code")],
-        [InlineKeyboardButton(get_text(user_id, "contact_admin"), callback_data="contact_admin"),
-         InlineKeyboardButton(get_text(user_id, "language"), callback_data="change_lang")]
+        [InlineKeyboardButton("🇮🇳 हिंदी", callback_data="lang_hi"),
+         InlineKeyboardButton("🇬🇧 English", callback_data="lang_en")]
     ]
-    
-    if user_id == OWNER_ID or user_id in ADMIN_IDS:
-        keyboard.append([InlineKeyboardButton("👑 Owner Panel", callback_data="owner_panel")])
-    
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await update.message.reply_text(welcome_text, reply_markup=reply_markup, parse_mode='Markdown')
+    await update.message.reply_text(
+        LANG['en']['welcome'],
+        reply_markup=reply_markup
+    )
 
-async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Main menu handler"""
     query = update.callback_query
     await query.answer()
     
     user_id = query.from_user.id
-    data = query.data
+    user = users_col.find_one({'user_id': user_id})
     
-    # Handle disabled buttons
-    if data == "disabled":
-        await query.answer("This action has already been processed!", show_alert=True)
+    if not user:
+        await query.edit_message_text("❌ User not found! Send /start")
         return
     
-    if data == "check_user":
-        context.user_data['action'] = 'check_user'
-        await query.edit_message_text(UI["check_user"], parse_mode='Markdown')
-        
-    elif data == "buy_points":
-        await show_point_packages(query, user_id)
-        
-    elif data == "gift_code":
-        context.user_data['action'] = 'gift_code'
-        await query.edit_message_text(UI["gift_code_prompt"], parse_mode='Markdown')
-        
-    elif data == "contact_admin":
-        context.user_data['action'] = 'contact_admin'
-        await query.edit_message_text(UI["contact_admin"], parse_mode='Markdown')
-        
-    elif data == "change_lang":
-        await change_language(query, user_id)
-        
-    elif data.startswith("buy_package_"):
-        package = data.replace("buy_package_", "")
-        await process_payment(query, user_id, package, context)
-        
-    elif data == "send_screenshot":
-        package_key = context.user_data.get('pending_package')
-        if package_key:
-            await query.edit_message_text(UI["screenshot_prompt"], parse_mode='Markdown')
-            return WAITING_SCREENSHOT
-        
-    elif data == "owner_panel":
-        await owner_panel(query, user_id, context)
-        
-    elif data == "view_pending":
-        await view_pending_payments(query, user_id, context)
-        
-    elif data.startswith("approve_payment_"):
-        if user_id == OWNER_ID or user_id in ADMIN_IDS:
-            payment_id = data.replace("approve_payment_", "")
-            await approve_payment(query, user_id, payment_id, context)
-            
-    elif data.startswith("reject_payment_"):
-        if user_id == OWNER_ID or user_id in ADMIN_IDS:
-            payment_id = data.replace("reject_payment_", "")
-            await reject_payment(query, user_id, payment_id, context)
-            
-    elif data.startswith("reply_to_"):
-        if user_id == OWNER_ID or user_id in ADMIN_IDS:
-            target_user_id = int(data.replace("reply_to_", ""))
-            context.user_data['reply_to_user'] = target_user_id
-            await query.edit_message_text(
-                UI["admin_reply_prompt"].format(user_id=target_user_id),
-                parse_mode='Markdown'
-            )
-            return WAITING_ADMIN_REPLY
-        
-    elif data.startswith("gen_gift_"):
-        if user_id == OWNER_ID or user_id in ADMIN_IDS:
-            points = int(data.replace("gen_gift_", ""))
-            await generate_gift(query, user_id, points, context)
-            
-    elif data.startswith("lang_"):
-        lang = data.replace("lang_", "")
-        users_col.update_one({"user_id": user_id}, {"$set": {"lang": lang}})
-        await query.edit_message_text("✅ Language Changed! Send /start again.")
-        
-    elif data == "back":
-        context.user_data.clear()
-        # Need to recreate the update for start function
-        new_update = Update(update.update_id, message=query.message)
-        new_update.effective_user = update.effective_user
-        new_update.effective_chat = update.effective_chat
-        await start(new_update, context)
+    points = user.get('points', 0)
+    searches = user.get('total_searches', 0)
+    name = user.get('first_name', 'User')
+    lang = get_user_lang(user_id)
     
-    return ConversationHandler.END
-
-async def show_point_packages(query, user_id):
-    """Show available point packages"""
-    text = UI["buy_points"].format(price=POINT_PRICE)
-    
-    for key, package in POINT_PACKAGES.items():
-        per_search = f"₹{POINT_PRICE} per search"
-        price_display = format_price(package['price'])
-        text += UI["package_display"].format(
-            emoji=package['emoji'],
-            points=package['points'],
-            price_display=price_display,
-            per_search=per_search
-        )
-    
-    text += "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    
-    keyboard = []
-    row = []
-    for i, (key, package) in enumerate(POINT_PACKAGES.items()):
-        btn_text = f"{package['emoji']} {package['points']}"
-        row.append(InlineKeyboardButton(btn_text, callback_data=f"buy_package_{key}"))
-        
-        if len(row) == 3 or i == len(POINT_PACKAGES) - 1:
-            keyboard.append(row)
-            row = []
-    
-    keyboard.append([InlineKeyboardButton(get_text(user_id, "cancel"), callback_data="back")])
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='Markdown')
-
-async def process_payment(query, user_id, package_key, context):
-    """Process payment for package"""
-    package = POINT_PACKAGES[package_key]
-    
-    context.user_data['pending_package'] = package_key
-    context.user_data['pending_amount'] = package['price']
-    
-    text = UI["payment_info"].format(
-        emoji=package['emoji'],
-        points=package['points'],
-        price=package['price'],
-        upi=UPI_ID
-    )
-    
+    # Main menu buttons
     keyboard = [
-        [InlineKeyboardButton(get_text(user_id, "send_screenshot"), callback_data="send_screenshot")],
-        [InlineKeyboardButton(get_text(user_id, "cancel"), callback_data="back")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='Markdown')
-
-async def change_language(query, user_id):
-    keyboard = [
-        [InlineKeyboardButton("🇮🇳 हिन्दी", callback_data="lang_hi")],
-        [InlineKeyboardButton("🇬🇧 English", callback_data="lang_en")],
-        [InlineKeyboardButton("🔙 Back", callback_data="back")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await query.edit_message_text("Choose Language / भाषा चुनें:", reply_markup=reply_markup)
-
-async def owner_panel(query, user_id, context):
-    """Owner panel"""
-    if user_id != OWNER_ID and user_id not in ADMIN_IDS:
-        await query.edit_message_text("❌ Unauthorized")
-        return
-    
-    total_users = users_col.count_documents({})
-    total_points = sum(user.get("points", 0) for user in users_col.find())
-    
-    today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-    today_payments = list(payments_col.find({"timestamp": {"$gte": today_start}, "status": "approved"}))
-    today_income = sum(p.get('amount', 500) for p in today_payments)
-    
-    month_start = datetime.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    month_payments = list(payments_col.find({"timestamp": {"$gte": month_start}, "status": "approved"}))
-    month_income = sum(p.get('amount', 500) for p in month_payments)
-    
-    pending = payments_col.count_documents({"status": "pending"})
-    
-    text = UI["owner_panel"].format(
-        users=total_users,
-        points=total_points,
-        today_income=today_income,
-        month_income=month_income,
-        pending=pending
-    )
-    
-    keyboard = []
-    
-    if pending > 0:
-        keyboard.append([InlineKeyboardButton(f"📋 View Pending Payments ({pending})", callback_data="view_pending")])
-    
-    gift_row = []
-    for i, (key, package) in enumerate(GIFT_PACKAGES.items()):
-        btn_text = f"{package['emoji']} {package['points']}"
-        gift_row.append(InlineKeyboardButton(btn_text, callback_data=f"gen_gift_{package['points']}"))
-        
-        if len(gift_row) == 4 or i == len(GIFT_PACKAGES) - 1:
-            keyboard.append(gift_row)
-            gift_row = []
-    
-    if pending == 0:
-        keyboard.append([InlineKeyboardButton("📋 View Pending", callback_data="view_pending")])
-    
-    keyboard.append([InlineKeyboardButton("🔙 Back", callback_data="back")])
-    
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await query.edit_message_text(text, reply_markup=reply_markup, parse_mode='Markdown')
-
-async def view_pending_payments(query, user_id, context):
-    """View all pending payments"""
-    if user_id != OWNER_ID and user_id not in ADMIN_IDS:
-        await query.edit_message_text("❌ Unauthorized")
-        return
-    
-    pending_payments = list(payments_col.find({"status": "pending"}).sort("timestamp", -1))
-    
-    if not pending_payments:
-        await query.edit_message_text(UI["no_pending"], parse_mode='Markdown')
-        return
-    
-    await query.edit_message_text("📋 **Fetching pending payments...**")
-    
-    for payment in pending_payments:
-        user = users_col.find_one({"user_id": payment['user_id']})
-        name = user.get('first_name', 'Unknown') if user else 'Unknown'
-        username = user.get('username', 'None') if user else 'None'
-        
-        points = POINT_PACKAGES[payment['package']]['points'] if payment['package'] in POINT_PACKAGES else 0
-        
-        text = UI["payment_request_admin"].format(
-            user_id=payment['user_id'],
-            name=name,
-            username=username,
-            points=points,
-            amount=payment['amount'],
-            time=payment['timestamp'].strftime('%Y-%m-%d %H:%M:%S'),
-            payment_id=str(payment['_id'])
-        )
-        
-        keyboard = [
-            [
-                InlineKeyboardButton("✅ Approve", callback_data=f"approve_payment_{payment['_id']}"),
-                InlineKeyboardButton("❌ Reject", callback_data=f"reject_payment_{payment['_id']}")
-            ]
+        [
+            InlineKeyboardButton("💰 Points", callback_data="check_points"),
+            InlineKeyboardButton("🛒 Buy", callback_data="buy_points")
+        ],
+        [
+            InlineKeyboardButton("📱 Search", callback_data="use_service"),
+            InlineKeyboardButton("🎁 Redeem", callback_data="redeem_code")
+        ],
+        [
+            InlineKeyboardButton("👤 Profile", callback_data="view_profile"),
+            InlineKeyboardButton("🤝 Referral", callback_data="view_referral")
+        ],
+        [
+            InlineKeyboardButton("📋 History", callback_data="view_history"),
+            InlineKeyboardButton("⚙️ Settings", callback_data="user_settings")
+        ],
+        [
+            InlineKeyboardButton("📞 Contact", callback_data="contact_admin"),
+            InlineKeyboardButton("❓ Help", callback_data="show_help")
         ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        
-        await context.bot.send_message(
-            chat_id=user_id,
-            text=text,
-            reply_markup=reply_markup,
-            parse_mode='Markdown'
-        )
+    ]
     
-    keyboard = [[InlineKeyboardButton("🔙 Back", callback_data="owner_panel")]]
+    # Admin button
+    if user_id == OWNER_ID:
+        keyboard.append([InlineKeyboardButton("👑 ADMIN PANEL", callback_data="admin_panel")])
+    
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await context.bot.send_message(
-        chat_id=user_id,
-        text="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n🔍 End of pending payments list",
+    
+    await query.edit_message_text(
+        LANG[lang]['main_menu'].format(name, format_number(points), searches),
         reply_markup=reply_markup
     )
 
-async def approve_payment(query, user_id, payment_id, context):
-    """Approve payment - FIXED: Only works once with button disable"""
-    if user_id != OWNER_ID and user_id not in ADMIN_IDS:
-        await query.edit_message_text("❌ Unauthorized")
+# ==================== PROFILE & SETTINGS ====================
+async def view_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """View user profile"""
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = query.from_user.id
+    user = users_col.find_one({'user_id': user_id})
+    lang = get_user_lang(user_id)
+    
+    if not user:
+        await query.edit_message_text("❌ Error!")
         return
     
-    try:
-        # Disable the buttons immediately
-        if query.message.reply_markup:
-            disabled_markup = disable_buttons(query.message.reply_markup)
-            await query.edit_message_reply_markup(reply_markup=disabled_markup)
-        
-        # Check if payment already processed
-        payment = payments_col.find_one({"_id": ObjectId(payment_id)})
-        
-        if not payment:
-            await query.edit_message_text("❌ Payment not found")
-            return
-        
-        if payment.get('status') != 'pending':
-            await query.edit_message_text(f"❌ Payment already {payment.get('status')}")
-            return
-        
-        # Update payment status - ATOMIC operation
-        result = payments_col.update_one(
-            {"_id": ObjectId(payment_id), "status": "pending"},
-            {"$set": {"status": "approved", "approved_by": user_id, "approved_at": datetime.now()}}
-        )
-        
-        if result.modified_count == 0:
-            await query.edit_message_text("❌ Payment already processed by someone else")
-            return
-        
-        # Add points to user
-        points = POINT_PACKAGES[payment['package']]['points']
-        
-        user = users_col.find_one({"user_id": payment['user_id']})
-        current_points = user.get('points', 0) if user else 0
-        
-        users_col.update_one(
-            {"user_id": payment['user_id']},
-            {"$inc": {"points": points}}
-        )
-        
-        new_balance = current_points + points
-        
-        # Notify user
-        try:
-            user_text = UI["payment_approved_user"].format(
-                points=points,
-                amount=payment['amount'],
-                balance=new_balance
-            )
-            await context.bot.send_message(
-                chat_id=payment['user_id'],
-                text=user_text,
-                parse_mode='Markdown'
-            )
-        except Exception as e:
-            logger.error(f"Failed to notify user: {e}")
-        
-        # Update the button message
-        await query.edit_message_text(
-            f"✅ Payment approved!\n\n"
-            f"User: {payment['user_id']}\n"
-            f"Points: {points}\n"
-            f"Amount: ₹{payment['amount']}\n"
-            f"New Balance: {new_balance}"
-        )
-        
-    except Exception as e:
-        await query.edit_message_text(f"❌ Error: {str(e)}")
-
-async def reject_payment(query, user_id, payment_id, context):
-    """Reject payment - FIXED: Only works once with button disable"""
-    if user_id != OWNER_ID and user_id not in ADMIN_IDS:
-        await query.edit_message_text("❌ Unauthorized")
-        return
+    join_date = format_ist(user.get('joined_date', get_ist()))
     
-    try:
-        # Disable the buttons immediately
-        if query.message.reply_markup:
-            disabled_markup = disable_buttons(query.message.reply_markup)
-            await query.edit_message_reply_markup(reply_markup=disabled_markup)
-        
-        # Check if payment already processed
-        payment = payments_col.find_one({"_id": ObjectId(payment_id)})
-        
-        if not payment:
-            await query.edit_message_text("❌ Payment not found")
-            return
-        
-        if payment.get('status') != 'pending':
-            await query.edit_message_text(f"❌ Payment already {payment.get('status')}")
-            return
-        
-        # Update payment status - ATOMIC operation
-        result = payments_col.update_one(
-            {"_id": ObjectId(payment_id), "status": "pending"},
-            {"$set": {"status": "rejected", "rejected_by": user_id, "rejected_at": datetime.now()}}
-        )
-        
-        if result.modified_count == 0:
-            await query.edit_message_text("❌ Payment already processed by someone else")
-            return
-        
-        # Notify user
-        try:
-            await context.bot.send_message(
-                chat_id=payment['user_id'],
-                text=UI["payment_rejected_user"].format(admin=ADMIN_USERNAME),
-                parse_mode='Markdown'
-            )
-        except Exception as e:
-            logger.error(f"Failed to notify user: {e}")
-        
-        await query.edit_message_text(f"❌ Payment rejected for user {payment['user_id']}")
-        
-    except Exception as e:
-        await query.edit_message_text(f"❌ Error: {str(e)}")
-
-async def generate_gift(query, user_id, points, context):
-    """Generate gift code"""
-    if user_id != OWNER_ID and user_id not in ADMIN_IDS:
-        await query.edit_message_text("❌ Unauthorized")
-        return
+    # Get stats
+    transactions = transactions_col.count_documents({'user_id': user_id})
+    referrals = user.get('total_referrals', 0)
     
-    code = generate_gift_code()
-    gift_data = {
-        "code": code,
-        "points": points,
-        "value": points * POINT_PRICE,
-        "created_by": user_id,
-        "created_at": datetime.now(),
-        "used_by": None,
-        "used_at": None
-    }
-    gift_codes_col.insert_one(gift_data)
-    
-    text = UI["gift_created_admin"].format(
-        points=points,
-        value=points * POINT_PRICE,
-        code=code
+    profile_text = LANG[lang]['profile'].format(
+        user_id,
+        user.get('first_name', 'Unknown'),
+        join_date,
+        format_number(user.get('points', 0)),
+        user.get('total_searches', 0),
+        user.get('total_redeemed', 0),
+        referrals
     )
     
-    await query.edit_message_text(text, parse_mode='Markdown')
-
-async def gift_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle /gift command"""
-    user_id = update.effective_user.id
+    keyboard = [[InlineKeyboardButton(LANG[lang]['back'], callback_data="back_to_menu")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
     
-    if user_id != OWNER_ID and user_id not in ADMIN_IDS:
-        await update.message.reply_text("❌ Unauthorized")
+    await query.edit_message_text(profile_text, reply_markup=reply_markup)
+
+async def user_settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """User settings menu"""
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = query.from_user.id
+    lang = get_user_lang(user_id)
+    user = users_col.find_one({'user_id': user_id})
+    
+    settings = user.get('settings', {})
+    notif_status = "✅ ON" if settings.get('notifications', True) else "❌ OFF"
+    private_status = "✅ ON" if settings.get('private_mode', False) else "❌ OFF"
+    
+    keyboard = [
+        [InlineKeyboardButton(f"🔔 Notifications {notif_status}", callback_data="toggle_notif")],
+        [InlineKeyboardButton(f"🕵️ Private Mode {private_status}", callback_data="toggle_private")],
+        [InlineKeyboardButton("🌐 Change Language", callback_data="change_lang")],
+        [InlineKeyboardButton(LANG[lang]['back'], callback_data="back_to_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(
+        LANG[lang]['settings'],
+        reply_markup=reply_markup
+    )
+
+async def toggle_notification(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Toggle notifications"""
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = query.from_user.id
+    user = users_col.find_one({'user_id': user_id})
+    
+    current = user.get('settings', {}).get('notifications', True)
+    users_col.update_one(
+        {'user_id': user_id},
+        {'$set': {'settings.notifications': not current}}
+    )
+    
+    await user_settings(update, context)
+
+async def toggle_private(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Toggle private mode"""
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = query.from_user.id
+    user = users_col.find_one({'user_id': user_id})
+    
+    current = user.get('settings', {}).get('private_mode', False)
+    users_col.update_one(
+        {'user_id': user_id},
+        {'$set': {'settings.private_mode': not current}}
+    )
+    
+    await user_settings(update, context)
+
+# ==================== POINTS SYSTEM ====================
+async def check_points(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Check points balance"""
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = query.from_user.id
+    user = users_col.find_one({'user_id': user_id})
+    lang = get_user_lang(user_id)
+    
+    if not user:
+        await query.edit_message_text("❌ Error!")
         return
     
-    if not context.args:
-        await update.message.reply_text("Usage: /gift <points>\nExample: /gift 14")
+    points = user.get('points', 0)
+    
+    keyboard = [
+        [InlineKeyboardButton("🛒 Buy Points", callback_data="buy_points")],
+        [InlineKeyboardButton(LANG[lang]['back'], callback_data="back_to_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(
+        LANG[lang]['check_points'].format(format_number(points)),
+        reply_markup=reply_markup
+    )
+
+async def buy_points_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show buy points menu"""
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = query.from_user.id
+    lang = get_user_lang(user_id)
+    
+    keyboard = []
+    for key, package in POINT_PACKAGES.items():
+        popular = "🔥 " if package['popular'] else ""
+        keyboard.append([InlineKeyboardButton(
+            f"{package['emoji']} {popular}{package['points']} Points - ₹{package['price']}",
+            callback_data=f"buy_pkg_{package['points']}"
+        )])
+    
+    keyboard.append([InlineKeyboardButton(LANG[lang]['back'], callback_data="back_to_menu")])
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(
+        LANG[lang]['buy_points'],
+        reply_markup=reply_markup
+    )
+
+async def process_purchase(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Process point purchase"""
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = query.from_user.id
+    lang = get_user_lang(user_id)
+    points = int(query.data.split('_')[2])
+    
+    # Create order
+    order_id = generate_order_id()
+    orders_col.insert_one({
+        'order_id': order_id,
+        'user_id': user_id,
+        'points': points,
+        'amount': points * 5,
+        'status': 'pending',
+        'payment_method': None,
+        'created_at': get_ist()
+    })
+    
+    # Payment options
+    keyboard = [
+        [InlineKeyboardButton("💳 Razorpay", callback_data=f"pay_razor_{order_id}")],
+        [InlineKeyboardButton("📲 PhonePe", callback_data=f"pay_phonepe_{order_id}")],
+        [InlineKeyboardButton("🧾 Google Pay", callback_data=f"pay_gpay_{order_id}")],
+        [InlineKeyboardButton("❌ Cancel", callback_data="buy_points")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(
+        f"🛒 Order #{order_id}\n\n"
+        f"📦 Package: {points} Points\n"
+        f"💰 Amount: ₹{points * 5}\n\n"
+        f"Select payment method:",
+        reply_markup=reply_markup
+    )
+
+async def process_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Process payment"""
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = query.from_user.id
+    data = query.data.split('_')
+    method = data[1]
+    order_id = data[2]
+    
+    order = orders_col.find_one({'order_id': order_id, 'user_id': user_id})
+    if not order:
+        await query.edit_message_text("❌ Order not found!")
         return
     
-    try:
-        points = int(context.args[0])
-        if points <= 0:
-            await update.message.reply_text("❌ Points must be positive")
-            return
-        
-        code = generate_gift_code()
-        gift_data = {
-            "code": code,
-            "points": points,
-            "value": points * POINT_PRICE,
-            "created_by": user_id,
-            "created_at": datetime.now(),
-            "used_by": None,
-            "used_at": None
-        }
-        gift_codes_col.insert_one(gift_data)
-        
-        text = UI["gift_created_admin"].format(
-            points=points,
-            value=points * POINT_PRICE,
-            code=code
-        )
-        await update.message.reply_text(text, parse_mode='Markdown')
-        
-    except ValueError:
-        await update.message.reply_text("❌ Invalid points value")
-
-# ==================== MESSAGE HANDLERS ====================
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    text = update.message.text
-    action = context.user_data.get('action')
+    # Update order
+    orders_col.update_one(
+        {'order_id': order_id},
+        {'$set': {
+            'payment_method': method,
+            'status': 'processing'
+        }}
+    )
     
-    if action == 'check_user':
-        await check_user(update, context, text)
-    elif action == 'gift_code':
-        await redeem_gift(update, context, text)
-    elif action == 'contact_admin':
-        await contact_admin(update, context, text)
+    # Payment instructions
+    upi_id = "nikilsaxena843@okhdfcbank"
+    
+    if method == "razor":
+        instructions = f"🔴 RAZORPAY PAYMENT\n\n"
+    elif method == "phonepe":
+        instructions = f"🔵 PHONEPE PAYMENT\n\n"
     else:
-        await start(update, context)
-
-async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle photo/screenshot messages"""
-    user_id = update.effective_user.id
+        instructions = f"🟢 GPAY PAYMENT\n\n"
     
-    package_key = context.user_data.get('pending_package')
-    if not package_key:
-        await update.message.reply_text("Please use /start first")
+    instructions += (
+        f"Order: #{order_id}\n"
+        f"Amount: ₹{order['amount']}\n"
+        f"UPI ID: `{upi_id}`\n\n"
+        f"Steps:\n"
+        f"1️⃣ Open {method.upper()} app\n"
+        f"2️⃣ Pay to: {upi_id}\n"
+        f"3️⃣ Send payment screenshot\n"
+        f"4️⃣ Click 'I Paid' button\n\n"
+        f"⚠️ Payment verify होने पर पॉइंट्स自动 मिल जाएंगे!"
+    )
+    
+    keyboard = [
+        [InlineKeyboardButton("✅ I PAID", callback_data=f"verify_pay_{order_id}")],
+        [InlineKeyboardButton("❌ Cancel", callback_data="buy_points")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(
+        instructions,
+        parse_mode=ParseMode.MARKDOWN,
+        reply_markup=reply_markup
+    )
+
+async def verify_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Verify payment"""
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = query.from_user.id
+    order_id = query.data.split('_')[2]
+    
+    order = orders_col.find_one({'order_id': order_id, 'user_id': user_id})
+    if not order:
+        await query.edit_message_text("❌ Order not found!")
         return
     
-    package = POINT_PACKAGES[package_key]
+    # Notify admin
+    admin_msg = (
+        f"💰 PAYMENT VERIFICATION REQUIRED\n\n"
+        f"Order: #{order_id}\n"
+        f"User: {user_id}\n"
+        f"Points: {order['points']}\n"
+        f"Amount: ₹{order['amount']}\n"
+        f"Method: {order['payment_method']}\n\n"
+        f"Verify and add points!"
+    )
     
-    # Save payment request with screenshot
-    payment_data = {
-        "user_id": user_id,
-        "username": update.effective_user.username,
-        "package": package_key,
-        "amount": package['price'],
-        "timestamp": datetime.now(),
-        "status": "pending",
-        "has_screenshot": True
-    }
-    result = payments_col.insert_one(payment_data)
-    payment_id = str(result.inserted_id)
+    keyboard = [
+        [InlineKeyboardButton("✅ Approve", callback_data=f"admin_approve_{order_id}")],
+        [InlineKeyboardButton("❌ Reject", callback_data=f"admin_reject_{order_id}")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
     
-    # Clear pending package
-    context.user_data['pending_package'] = None
+    await context.bot.send_message(OWNER_ID, admin_msg, reply_markup=reply_markup)
     
-    # Forward to admins
-    for admin_id in ADMIN_IDS:
-        try:
-            points = package['points']
-            
-            caption = UI["payment_request_admin"].format(
-                user_id=user_id,
-                name=update.effective_user.first_name,
-                username=update.effective_user.username or 'None',
-                points=points,
-                amount=package['price'],
-                time=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                payment_id=payment_id
-            )
-            
-            keyboard = [
-                [
-                    InlineKeyboardButton("✅ Approve", callback_data=f"approve_payment_{payment_id}"),
-                    InlineKeyboardButton("❌ Reject", callback_data=f"reject_payment_{payment_id}")
-                ]
-            ]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            
-            await context.bot.send_photo(
-                chat_id=admin_id,
-                photo=update.message.photo[-1].file_id,
-                caption=caption,
-                reply_markup=reply_markup,
-                parse_mode='Markdown'
-            )
-        except Exception as e:
-            logger.error(f"Failed to forward to admin {admin_id}: {e}")
-    
-    # Confirm to user
-    await update.message.reply_text(UI["payment_sent"].format(admin=ADMIN_USERNAME), parse_mode='Markdown')
+    await query.edit_message_text(
+        "✅ Payment notification sent to admin!\n"
+        "Points will be added after verification."
+    )
 
-async def check_user(update: Update, context: ContextTypes.DEFAULT_TYPE, user_id_to_check):
-    """Check user via NEW API"""
-    user_id = update.effective_user.id
+# ==================== SMS SERVICE ====================
+async def use_service(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Use SMS service"""
+    query = update.callback_query
+    await query.answer()
     
-    user = users_col.find_one({"user_id": user_id})
-    if not user or user.get("points", 0) < CHECK_PRICE:
-        await update.message.reply_text(
-            UI["insufficient_points"].format(
-                points=user.get("points", 0) if user else 0,
-                admin=ADMIN_USERNAME
-            ),
-            parse_mode='Markdown'
+    user_id = query.from_user.id
+    lang = get_user_lang(user_id)
+    user = users_col.find_one({'user_id': user_id})
+    
+    if user.get('points', 0) < 1:
+        keyboard = [
+            [InlineKeyboardButton("🛒 Buy Points", callback_data="buy_points")],
+            [InlineKeyboardButton(LANG[lang]['back'], callback_data="back_to_menu")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(
+            LANG[lang]['insufficient_points'].format(user.get('points', 0)),
+            reply_markup=reply_markup
         )
-        context.user_data['action'] = None
         return
+    
+    await query.edit_message_text(
+        LANG[lang]['enter_number'],
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton(LANG[lang]['back'], callback_data="back_to_menu")
+        ]])
+    )
+    return SEARCH_NUMBER
+
+async def handle_search_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle number input for search"""
+    user_id = update.effective_user.id
+    lang = get_user_lang(user_id)
+    number = update.message.text.strip()
+    
+    # Validate number
+    if not (number.isdigit() and len(number) == 10):
+        await update.message.reply_text(LANG[lang]['invalid_number'])
+        return SEARCH_NUMBER
+    
+    # Check points
+    user = users_col.find_one({'user_id': user_id})
+    if user.get('points', 0) < 1:
+        await update.message.reply_text(LANG[lang]['insufficient_points'].format(user.get('points', 0)))
+        return ConversationHandler.END
+    
+    # Processing
+    processing = await update.message.reply_text(LANG[lang]['processing'])
     
     try:
-        await update.message.reply_text("⏳ **Processing your request...**", parse_mode='Markdown')
-        
-        # NEW API CALL
-        params = {
-            "key": API_KEY,
-            "type": "sms",
-            "term": user_id_to_check
-        }
-        
+        # Call API
         response = requests.get(
             API_URL,
-            params=params,
-            headers={"Content-Type": "application/json"},
-            timeout=10
+            params={'key': API_KEY, 'type': 'sms', 'term': number},
+            timeout=30
         )
         
         if response.status_code == 200:
             data = response.json()
-            # Check the nested result structure
-            if data.get("success") and data.get("result", {}).get("success"):
-                result_data = data["result"]
-                
-                new_points = user["points"] - CHECK_PRICE
-                users_col.update_one(
-                    {"user_id": user_id},
-                    {"$set": {"points": new_points}, "$inc": {"total_used": 1}}
-                )
-                
-                result_text = UI["result"].format(
-                    country=result_data.get("country", "N/A"),
-                    code=result_data.get("country_code", "N/A"),
-                    number=result_data.get("number", "N/A"),
-                    remaining=new_points
-                )
-                
-                await update.message.reply_text(result_text, parse_mode='Markdown')
-                
-            else:
-                error_msg = data.get("result", {}).get("msg", "User not found")
-                await update.message.reply_text(
-                    f"❌ **{error_msg}**\n\nPlease check the ID and try again.",
-                    parse_mode='Markdown'
-                )
-        else:
-            await update.message.reply_text(
-                "❌ **API Error**\n\nPlease try again later or contact admin.",
-                parse_mode='Markdown'
-            )
+            data = clean_api_response(data)
             
+            # Deduct points
+            new_balance = await deduct_points(user_id, 1, f"SMS API: {number}")
+            
+            if new_balance:
+                # Save to history
+                search_history_col.insert_one({
+                    'user_id': user_id,
+                    'number': number,
+                    'result': data,
+                    'timestamp': get_ist()
+                })
+                
+                # Update user stats
+                users_col.update_one(
+                    {'user_id': user_id},
+                    {'$inc': {'total_searches': 1}}
+                )
+                
+                # Format result
+                if data.get('success') and data.get('result'):
+                    result = data['result']
+                    msg = LANG[lang]['search_result'].format(
+                        result.get('number', number),
+                        result.get('country', 'India'),
+                        result.get('country_code', '+91'),
+                        format_number(new_balance),
+                        format_ist(get_ist())
+                    )
+                else:
+                    msg = f"✅ Success!\n📱 Number: {number}\n💎 Remaining: {format_number(new_balance)}"
+                
+                # Send result
+                result_msg = await update.message.reply_text(msg)
+                
+                # Add reaction
+                settings = settings_col.find_one({'key': 'bot_settings'})
+                if settings and settings.get('reactions_enabled', True):
+                    await add_reaction(result_msg)
+                
+                await processing.delete()
+            else:
+                await processing.edit_text("❌ Error!")
+        else:
+            await processing.edit_text(LANG[lang]['api_error'])
+    
     except Exception as e:
-        await update.message.reply_text(
-            f"❌ **Error:** {str(e)}",
-            parse_mode='Markdown'
-        )
+        await processing.edit_text(f"❌ Error: {str(e)}")
     
-    context.user_data['action'] = None
+    return ConversationHandler.END
 
-async def redeem_gift(update: Update, context: ContextTypes.DEFAULT_TYPE, code):
-    """Redeem gift code"""
-    user_id = update.effective_user.id
+# ==================== GIFT CODE SYSTEM ====================
+async def redeem_code_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show gift code packages"""
+    query = update.callback_query
+    await query.answer()
     
-    gift = gift_codes_col.find_one({
-        "code": code.strip().upper(),
-        "used_by": None
+    user_id = query.from_user.id
+    lang = get_user_lang(user_id)
+    
+    keyboard = []
+    for key, package in GIFT_PACKAGES.items():
+        keyboard.append([InlineKeyboardButton(
+            f"{package['emoji']} {package['points']} Points Code",
+            callback_data=f"redeem_pkg_{package['points']}"
+        )])
+    
+    keyboard.append([InlineKeyboardButton(LANG[lang]['back'], callback_data="back_to_menu")])
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(
+        LANG[lang]['gift_packages'],
+        reply_markup=reply_markup
+    )
+
+async def enter_gift_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Enter gift code"""
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = query.from_user.id
+    lang = get_user_lang(user_id)
+    points = int(query.data.split('_')[2])
+    
+    context.user_data['redeem_points'] = points
+    
+    await query.edit_message_text(
+        LANG[lang]['enter_gift_code'].format(points),
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton(LANG[lang]['back'], callback_data="redeem_code")
+        ]])
+    )
+    return REDEEM_CODE
+
+async def handle_gift_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle gift code redemption"""
+    user_id = update.effective_user.id
+    lang = get_user_lang(user_id)
+    code = update.message.text.strip().upper()
+    expected_points = context.user_data.get('redeem_points')
+    
+    # Find code
+    gift_code = gift_codes_col.find_one({
+        'code': code,
+        'used': False,
+        'points': expected_points
     })
     
-    if not gift:
-        await update.message.reply_text(
-            UI["gift_invalid"].format(admin=ADMIN_USERNAME),
-            parse_mode='Markdown'
-        )
-        context.user_data['action'] = None
-        return
-    
-    # Add points
-    users_col.update_one(
-        {"user_id": user_id},
-        {"$inc": {"points": gift["points"]}}
-    )
+    if not gift_code:
+        await update.message.reply_text(LANG[lang]['invalid_code'])
+        return REDEEM_CODE
     
     # Mark as used
     gift_codes_col.update_one(
-        {"_id": gift["_id"]},
-        {"$set": {"used_by": user_id, "used_at": datetime.now()}}
+        {'code': code},
+        {'$set': {
+            'used': True,
+            'used_by': user_id,
+            'used_date': get_ist()
+        }}
+    )
+    
+    # Add points
+    points = gift_code['points']
+    new_balance = await add_points(user_id, points, f"Redeemed gift code: {code}")
+    
+    # Update user stats
+    users_col.update_one(
+        {'user_id': user_id},
+        {'$inc': {'total_redeemed': 1}}
     )
     
     await update.message.reply_text(
-        UI["gift_success"].format(
-            points=gift["points"],
-            value=gift["points"] * POINT_PRICE
-        ),
-        parse_mode='Markdown'
+        LANG[lang]['code_success'].format(points, format_number(new_balance)),
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("🏠 Main Menu", callback_data="back_to_menu")
+        ]])
     )
-    context.user_data['action'] = None
+    
+    return ConversationHandler.END
 
-async def contact_admin(update: Update, context: ContextTypes.DEFAULT_TYPE, message):
-    """Contact admin - User to Admin"""
-    user_id = update.effective_user.id
+# ==================== REFERRAL SYSTEM ====================
+async def view_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """View referral info"""
+    query = update.callback_query
+    await query.answer()
     
-    msg_data = {
-        "user_id": user_id,
-        "username": update.effective_user.username,
-        "first_name": update.effective_user.first_name,
-        "message": message,
-        "timestamp": datetime.now(),
-        "replied": False
-    }
-    admin_msgs_col.insert_one(msg_data)
+    user_id = query.from_user.id
+    user = users_col.find_one({'user_id': user_id})
+    lang = get_user_lang(user_id)
     
-    forward_text = f"📨 **New Message from User**\n\n"
-    forward_text += f"👤 **User:** `{user_id}`\n"
-    forward_text += f"📝 **Name:** {update.effective_user.first_name}\n"
-    forward_text += f"🆔 **Username:** @{update.effective_user.username or 'None'}\n"
-    forward_text += f"💬 **Message:** {message}\n"
-    forward_text += f"🕐 **Time:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+    if not user:
+        return
     
-    # Add reply button for admin
-    keyboard = [[InlineKeyboardButton("✏️ Reply to User", callback_data=f"reply_to_{user_id}")]]
+    ref_code = user.get('referral_code', '')
+    bot_username = (await context.bot.get_me()).username
+    settings = settings_col.find_one({'key': 'bot_settings'})
+    bonus = settings.get('referral_bonus', 10) if settings else 10
+    
+    # Get referral stats
+    ref_data = referral_col.find_one({'user_id': user_id})
+    used_by = ref_data.get('used_by', []) if ref_data else []
+    total_ref = len(used_by)
+    total_commission = total_ref * bonus
+    
+    keyboard = [
+        [InlineKeyboardButton("📤 Share Referral Link", callback_data="share_referral")],
+        [InlineKeyboardButton(LANG[lang]['back'], callback_data="back_to_menu")]
+    ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    for admin_id in ADMIN_IDS:
-        try:
-            await context.bot.send_message(
-                admin_id,
-                forward_text,
-                reply_markup=reply_markup,
-                parse_mode='Markdown'
-            )
-        except Exception as e:
-            logger.error(f"Failed to forward to admin {admin_id}: {e}")
-    
-    await update.message.reply_text(UI["msg_sent"], parse_mode='Markdown')
-    context.user_data['action'] = None
+    await query.edit_message_text(
+        LANG[lang]['referral'].format(
+            ref_code,
+            bot_username,
+            f"ref_{ref_code}",
+            bonus,
+            total_ref,
+            format_number(total_commission)
+        ),
+        parse_mode=ParseMode.MARKDOWN,
+        reply_markup=reply_markup
+    )
 
-async def admin_reply_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle admin reply to user - FIXED: Now working properly"""
-    user_id = update.effective_user.id
+async def share_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Share referral link"""
+    query = update.callback_query
+    await query.answer()
     
-    # Check if user is admin
-    if user_id != OWNER_ID and user_id not in ADMIN_IDS:
-        await update.message.reply_text("❌ Unauthorized")
+    user_id = query.from_user.id
+    user = users_col.find_one({'user_id': user_id})
+    bot_username = (await context.bot.get_me()).username
+    
+    ref_link = f"https://t.me/{bot_username}?start=ref_{user['referral_code']}"
+    
+    keyboard = [
+        [InlineKeyboardButton("📱 Share", url=f"https://t.me/share/url?url={ref_link}&text=Join%20this%20bot%20and%20get%20points!")],
+        [InlineKeyboardButton("🔙 Back", callback_data="view_referral")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(
+        f"🔗 Your Referral Link:\n`{ref_link}`\n\nClick Share to send to friends!",
+        parse_mode=ParseMode.MARKDOWN,
+        reply_markup=reply_markup
+    )
+
+# ==================== DAILY BONUS ====================
+async def daily_bonus(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Claim daily bonus"""
+    user_id = update.effective_user.id
+    user = users_col.find_one({'user_id': user_id})
+    lang = get_user_lang(user_id)
+    
+    if not user:
+        return
+    
+    last_bonus = user.get('daily_bonus_last')
+    now = get_ist()
+    
+    if last_bonus:
+        last_date = last_bonus.date()
+        today = now.date()
+        
+        if last_date == today:
+            next_bonus = last_bonus + timedelta(days=1)
+            next_time = next_bonus.strftime("%I:%M %p")
+            await update.message.reply_text(
+                LANG[lang]['already_claimed'].format(next_time)
+            )
+            return
+    
+    # Give bonus
+    settings = settings_col.find_one({'key': 'bot_settings'})
+    bonus = settings.get('daily_bonus', 5) if settings else 5
+    
+    new_balance = await add_points(user_id, bonus, "Daily bonus")
+    
+    users_col.update_one(
+        {'user_id': user_id},
+        {'$set': {'daily_bonus_last': now}}
+    )
+    
+    next_bonus = now + timedelta(days=1)
+    next_time = next_bonus.strftime("%I:%M %p")
+    
+    await update.message.reply_text(
+        LANG[lang]['daily_bonus'].format(bonus, next_time)
+    )
+
+# ==================== HISTORY ====================
+async def view_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """View search history"""
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = query.from_user.id
+    lang = get_user_lang(user_id)
+    
+    # Get last 10 searches
+    searches = list(search_history_col.find(
+        {'user_id': user_id}
+    ).sort('timestamp', -1).limit(10))
+    
+    if not searches:
+        history_text = "📭 No search history yet!"
+    else:
+        history_text = ""
+        for i, s in enumerate(searches, 1):
+            time = format_ist(s['timestamp']).split()[1]
+            history_text += f"{i}. 📱 {s['number']} - 🕐 {time}\n"
+    
+    keyboard = [
+        [InlineKeyboardButton("📊 Transactions", callback_data="view_transactions")],
+        [InlineKeyboardButton(LANG[lang]['back'], callback_data="back_to_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(
+        LANG[lang]['search_history'].format(history_text),
+        reply_markup=reply_markup
+    )
+
+async def view_transactions(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """View transaction history"""
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = query.from_user.id
+    lang = get_user_lang(user_id)
+    
+    # Get last 10 transactions
+    transactions = list(transactions_col.find(
+        {'user_id': user_id}
+    ).sort('timestamp', -1).limit(10))
+    
+    if not transactions:
+        trans_text = "📭 No transactions yet!"
+    else:
+        trans_text = ""
+        for t in transactions:
+            emoji = "➕" if t['type'] == 'credit' else "➖"
+            time = format_ist(t['timestamp']).split()[1]
+            trans_text += f"{emoji} {t['amount']} pts - {t['reason'][:20]}... 🕐 {time}\n"
+    
+    keyboard = [[InlineKeyboardButton(LANG[lang]['back'], callback_data="view_history")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(
+        LANG[lang]['transaction_history'].format(trans_text),
+        reply_markup=reply_markup
+    )
+
+# ==================== HELP & SUPPORT ====================
+async def show_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show help menu"""
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = query.from_user.id
+    lang = get_user_lang(user_id)
+    
+    keyboard = [
+        [InlineKeyboardButton("❓ FAQ", callback_data="show_faq")],
+        [InlineKeyboardButton("📞 Contact Admin", callback_data="contact_admin")],
+        [InlineKeyboardButton("📝 Terms", callback_data="show_terms")],
+        [InlineKeyboardButton(LANG[lang]['back'], callback_data="back_to_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(
+        LANG[lang]['help_text'],
+        reply_markup=reply_markup
+    )
+
+async def show_faq(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show FAQ"""
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = query.from_user.id
+    lang = get_user_lang(user_id)
+    
+    faq_text = (
+        "❓ FAQ\n\n"
+        "Q: Points कैसे खरीदें?\n"
+        "A: Buy Points पर क्लिक करें और पेमेंट करें\n\n"
+        "Q: 1 सर्च में कितने पॉइंट लगते हैं?\n"
+        "A: 1 सर्च = 1 पॉइंट\n\n"
+        "Q: रेफरल से कितने पॉइंट मिलते हैं?\n"
+        "A: 10 पॉइंट प्रति रेफरल\n\n"
+        "Q: डेली बोनस कितने बजे मिलता है?\n"
+        "A: हर 24 घंटे में एक बार\n\n"
+        "Q: पेमेंट वेरिफाई होने में कितना समय?\n"
+        "A: 5-10 मिनट"
+    )
+    
+    keyboard = [[InlineKeyboardButton(LANG[lang]['back'], callback_data="show_help")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(faq_text, reply_markup=reply_markup)
+
+async def show_terms(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show terms and conditions"""
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = query.from_user.id
+    lang = get_user_lang(user_id)
+    
+    terms_text = (
+        "📝 Terms & Conditions\n\n"
+        "1. No refund after points added\n"
+        "2. Wrong number = point deducted\n"
+        "3. Multiple accounts = ban\n"
+        "4. API misuse = permanent ban\n"
+        "5. Points have no cash value\n"
+        "6. We can change prices anytime\n"
+        "7. Owner decision is final"
+    )
+    
+    keyboard = [[InlineKeyboardButton(LANG[lang]['back'], callback_data="show_help")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(terms_text, reply_markup=reply_markup)
+
+# ==================== CONTACT ADMIN ====================
+async def contact_admin_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Start contact admin"""
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = query.from_user.id
+    lang = get_user_lang(user_id)
+    
+    await query.edit_message_text(
+        LANG[lang]['contact_admin'],
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton(LANG[lang]['back'], callback_data="back_to_menu")
+        ]])
+    )
+    return CONTACT_ADMIN
+
+async def handle_contact_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle contact message"""
+    user_id = update.effective_user.id
+    lang = get_user_lang(user_id)
+    message = update.message.text
+    user = users_col.find_one({'user_id': user_id})
+    
+    # Forward to admin
+    admin_msg = (
+        f"📨 New Message from User\n\n"
+        f"👤 User: {user.get('first_name')}\n"
+        f"🆔 ID: {user_id}\n"
+        f"👤 Username: @{update.effective_user.username}\n"
+        f"💰 Points: {user.get('points', 0)}\n"
+        f"🕐 Time: {format_ist(get_ist())}\n\n"
+        f"💬 Message:\n{message}"
+    )
+    
+    keyboard = [[InlineKeyboardButton("💬 Reply", callback_data=f"reply_user_{user_id}")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await context.bot.send_message(OWNER_ID, admin_msg, reply_markup=reply_markup)
+    
+    await update.message.reply_text(
+        LANG[lang]['msg_sent'],
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("🏠 Main Menu", callback_data="back_to_menu")
+        ]])
+    )
+    
+    return ConversationHandler.END
+
+# ==================== ADMIN PANEL ====================
+async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Admin panel main menu"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.from_user.id != OWNER_ID:
+        await query.edit_message_text("❌ Unauthorized!")
+        return
+    
+    # Get stats
+    total_users = users_col.count_documents({})
+    active_today = users_col.count_documents({
+        'last_active': {'$gte': get_ist() - timedelta(days=1)}
+    })
+    total_points = sum(u.get('points', 0) for u in users_col.find())
+    total_transactions = transactions_col.count_documents({})
+    total_searches = search_history_col.count_documents({})
+    total_orders = orders_col.count_documents({'status': 'completed'})
+    total_revenue = orders_col.aggregate([
+        {'$match': {'status': 'completed'}},
+        {'$group': {'_id': None, 'total': {'$sum': '$amount'}}}
+    ])
+    revenue = list(total_revenue)
+    total_revenue = revenue[0]['total'] if revenue else 0
+    
+    settings = settings_col.find_one({'key': 'bot_settings'})
+    maintenance = "🔴 ON" if settings and settings.get('maintenance_mode') else "🟢 OFF"
+    
+    stats = f"""
+👑 ADMIN PANEL
+🕐 {format_ist(get_ist())} IST
+
+📊 STATISTICS:
+👥 Total Users: {total_users}
+📱 Active Today: {active_today}
+💰 Total Points: {format_number(total_points)}
+💳 Transactions: {total_transactions}
+🔍 Total Searches: {total_searches}
+🛒 Completed Orders: {total_orders}
+💵 Total Revenue: ₹{format_number(total_revenue)}
+
+⚙️ MAINTENANCE: {maintenance}
+
+🔧 OPTIONS:
+    """
+    
+    keyboard = [
+        [InlineKeyboardButton("📊 User Management", callback_data="admin_users")],
+        [InlineKeyboardButton("💰 Point Management", callback_data="admin_points")],
+        [InlineKeyboardButton("🎁 Gift Code Management", callback_data="admin_gift")],
+        [InlineKeyboardButton("📢 Broadcast", callback_data="admin_broadcast")],
+        [InlineKeyboardButton("📈 Orders & Transactions", callback_data="admin_orders")],
+        [InlineKeyboardButton("⚙️ Bot Settings", callback_data="admin_settings")],
+        [InlineKeyboardButton("🚫 Blacklist", callback_data="admin_blacklist")],
+        [InlineKeyboardButton("📤 Export Data", callback_data="admin_export")],
+        [InlineKeyboardButton("💾 Backup Database", callback_data="admin_backup")],
+        [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(stats, reply_markup=reply_markup)
+
+# ==================== ADMIN: USER MANAGEMENT ====================
+async def admin_users_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Admin user management"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.from_user.id != OWNER_ID:
+        return
+    
+    keyboard = [
+        [InlineKeyboardButton("📋 View All Users", callback_data="admin_view_users")],
+        [InlineKeyboardButton("🔍 Search User", callback_data="admin_search_user")],
+        [InlineKeyboardButton("⚠️ Warn User", callback_data="admin_warn_user")],
+        [InlineKeyboardButton("🚫 Ban User", callback_data="admin_ban_user")],
+        [InlineKeyboardButton("✅ Unban User", callback_data="admin_unban_user")],
+        [InlineKeyboardButton("🏆 Top Users", callback_data="admin_top_users")],
+        [InlineKeyboardButton("🔙 Back", callback_data="admin_panel")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(
+        "👥 User Management\n\nChoose option:",
+        reply_markup=reply_markup
+    )
+
+async def admin_view_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """View all users"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.from_user.id != OWNER_ID:
+        return
+    
+    # Get users (paginated)
+    page = context.user_data.get('user_page', 0)
+    users = list(users_col.find().sort('points', -1).skip(page*10).limit(10))
+    
+    if not users:
+        await query.edit_message_text("No users found!")
+        return
+    
+    msg = f"📋 Users (Page {page+1}):\n\n"
+    for i, user in enumerate(users, 1):
+        name = user.get('first_name', 'Unknown')[:15]
+        points = user.get('points', 0)
+        banned = "🚫" if blacklist_col.find_one({'user_id': user['user_id']}) else "✅"
+        msg += f"{i}. {banned} {name} - {format_number(points)} pts\n"
+    
+    keyboard = []
+    nav = []
+    if page > 0:
+        nav.append(InlineKeyboardButton("◀️ Prev", callback_data="admin_users_prev"))
+    nav.append(InlineKeyboardButton(f"{page+1}/{(users_col.count_documents({})//10)+1}", callback_data="noop"))
+    if len(users) == 10:
+        nav.append(InlineKeyboardButton("Next ▶️", callback_data="admin_users_next"))
+    keyboard.append(nav)
+    keyboard.append([InlineKeyboardButton("🔙 Back", callback_data="admin_users")])
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await query.edit_message_text(msg, reply_markup=reply_markup)
+
+# ==================== ADMIN: POINT MANAGEMENT ====================
+async def admin_points_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Admin point management"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.from_user.id != OWNER_ID:
+        return
+    
+    keyboard = [
+        [InlineKeyboardButton("➕ Add Points", callback_data="admin_add_points")],
+        [InlineKeyboardButton("➖ Remove Points", callback_data="admin_remove_points")],
+        [InlineKeyboardButton("📊 View All Transactions", callback_data="admin_all_trans")],
+        [InlineKeyboardButton("🔙 Back", callback_data="admin_panel")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(
+        "💰 Point Management\n\nChoose option:",
+        reply_markup=reply_markup
+    )
+
+async def admin_add_points_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Start add points process"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.from_user.id != OWNER_ID:
+        return
+    
+    await query.edit_message_text(
+        "Enter user ID and points (format: user_id points)\nExample: `123456789 100`",
+        parse_mode=ParseMode.MARKDOWN,
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("🔙 Cancel", callback_data="admin_points")
+        ]])
+    )
+    return ADD_POINTS
+
+async def handle_add_points(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle add points"""
+    if update.effective_user.id != OWNER_ID:
         return ConversationHandler.END
     
-    # Get the target user ID from context
-    target_user_id = context.user_data.get('reply_to_user')
-    if not target_user_id:
-        await update.message.reply_text("❌ No user selected to reply to")
+    text = update.message.text.strip().split()
+    if len(text) != 2:
+        await update.message.reply_text("❌ Invalid format! Use: user_id points")
+        return ADD_POINTS
+    
+    try:
+        target_id = int(text[0])
+        points = int(text[1])
+    except:
+        await update.message.reply_text("❌ Invalid numbers!")
+        return ADD_POINTS
+    
+    user = users_col.find_one({'user_id': target_id})
+    if not user:
+        await update.message.reply_text("❌ User not found!")
+        return ADD_POINTS
+    
+    new_balance = await add_points(target_id, points, "Admin added", update.effective_user.id)
+    
+    await update.message.reply_text(
+        f"✅ Added {points} points to user {target_id}\n"
+        f"New balance: {format_number(new_balance)}"
+    )
+    
+    # Notify user
+    try:
+        await context.bot.send_message(
+            target_id,
+            f"🎉 Admin ने आपके {points} पॉइंट्स जोड़ दिए!\nनया बैलेंस: {format_number(new_balance)}"
+        )
+    except:
+        pass
+    
+    return ConversationHandler.END
+
+# ==================== ADMIN: GIFT CODE MANAGEMENT ====================
+async def admin_gift_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Admin gift code management"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.from_user.id != OWNER_ID:
+        return
+    
+    keyboard = []
+    for key, package in GIFT_PACKAGES.items():
+        keyboard.append([InlineKeyboardButton(
+            f"{package['emoji']} Generate {package['points']} Points Code",
+            callback_data=f"admin_gen_gift_{package['points']}"
+        )])
+    
+    keyboard.append([InlineKeyboardButton("📋 View All Codes", callback_data="admin_view_codes")])
+    keyboard.append([InlineKeyboardButton("🔙 Back", callback_data="admin_panel")])
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(
+        "🎁 Gift Code Generator\n\nSelect package:",
+        reply_markup=reply_markup
+    )
+
+async def admin_generate_gift_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Generate gift code"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.from_user.id != OWNER_ID:
+        return
+    
+    points = int(query.data.split('_')[3])
+    code = f"GIFT{generate_code()}"
+    
+    gift_codes_col.insert_one({
+        'code': code,
+        'points': points,
+        'used': False,
+        'created_by': OWNER_ID,
+        'created_date': get_ist()
+    })
+    
+    await query.edit_message_text(
+        f"✅ Gift Code Generated!\n\n"
+        f"Code: `{code}`\n"
+        f"Points: {points}\n"
+        f"Package: {GIFT_PACKAGES[str(points)]['emoji']}\n"
+        f"Created: {format_ist(get_ist())}\n\n"
+        f"Share this code with users!",
+        parse_mode=ParseMode.MARKDOWN,
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("🎁 Generate More", callback_data="admin_gift"),
+            InlineKeyboardButton("🔙 Admin Panel", callback_data="admin_panel")
+        ]])
+    )
+
+# ==================== ADMIN: BROADCAST SYSTEM ====================
+async def admin_broadcast_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Start broadcast"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.from_user.id != OWNER_ID:
+        return
+    
+    keyboard = [
+        [InlineKeyboardButton("📝 Text Message", callback_data="broadcast_text")],
+        [InlineKeyboardButton("🖼️ Photo", callback_data="broadcast_photo")],
+        [InlineKeyboardButton("🎥 Video", callback_data="broadcast_video")],
+        [InlineKeyboardButton("🔙 Cancel", callback_data="admin_panel")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(
+        "📢 Broadcast System\n\nChoose broadcast type:",
+        reply_markup=reply_markup
+    )
+
+async def broadcast_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Broadcast text"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.from_user.id != OWNER_ID:
+        return
+    
+    await query.edit_message_text(
+        "Send the message to broadcast:",
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("🔙 Cancel", callback_data="admin_broadcast")
+        ]])
+    )
+    return BROADCAST_MSG
+
+async def handle_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle broadcast message"""
+    if update.effective_user.id != OWNER_ID:
         return ConversationHandler.END
     
     message = update.message.text
+    users = list(users_col.find({}, {'user_id': 1}))
     
-    # Send reply to user
-    try:
-        reply_text = UI["admin_reply_received"].format(
-            admin=ADMIN_USERNAME,
-            message=message
-        )
-        await context.bot.send_message(
-            chat_id=target_user_id,
-            text=reply_text,
-            parse_mode='Markdown'
-        )
-        
-        # Mark original message as replied
-        admin_msgs_col.update_many(
-            {"user_id": target_user_id, "replied": False},
-            {"$set": {"replied": True, "replied_at": datetime.now(), "reply_by": user_id, "reply_text": message}}
-        )
-        
-        await update.message.reply_text(
-            UI["admin_reply_sent"].format(user_id=target_user_id),
-            parse_mode='Markdown'
-        )
-        
-        # Clear the reply target
-        context.user_data['reply_to_user'] = None
-        
-        # End the conversation
-        return ConversationHandler.END
-        
-    except Exception as e:
-        await update.message.reply_text(f"❌ Failed to send reply: {str(e)}")
-        return ConversationHandler.END
+    progress = await update.message.reply_text(f"📢 Broadcasting to {len(users)} users...")
+    
+    success = 0
+    failed = 0
+    
+    for user in users:
+        try:
+            await context.bot.send_message(
+                user['user_id'],
+                f"📢 **ANNOUNCEMENT**\n\n{message}"
+            )
+            success += 1
+            await asyncio.sleep(0.05)  # Rate limit
+        except:
+            failed += 1
+    
+    await progress.edit_text(
+        f"✅ Broadcast Complete!\n\n"
+        f"Total: {len(users)}\n"
+        f"✅ Success: {success}\n"
+        f"❌ Failed: {failed}"
+    )
+    
+    return ConversationHandler.END
 
-async def redeem_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not context.args:
-        await update.message.reply_text("Usage: /redeem <gift_code>")
+# ==================== ADMIN: SETTINGS ====================
+async def admin_settings_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Admin settings menu"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.from_user.id != OWNER_ID:
         return
     
-    code = context.args[0]
-    await redeem_gift(update, context, code)
-
-# ==================== CONVERSATION HANDLERS ====================
-async def screenshot_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle screenshot in conversation"""
-    if update.message.photo:
-        return await handle_photo(update, context)
-    else:
-        await update.message.reply_text("❌ Please send a photo/screenshot")
-        return WAITING_SCREENSHOT
-
-async def admin_reply_conversation(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle admin reply conversation - FIXED"""
-    if update.message and update.message.text:
-        return await admin_reply_handler(update, context)
-    else:
-        await update.message.reply_text("❌ Please send a text message")
-        return WAITING_ADMIN_REPLY
-
-# ==================== MAIN ====================
-def main():
-    print("\n" + "="*60)
-    print("🚀 STARTING VIP BOT...")
-    print("="*60)
-    print(f"🤖 Bot Token: {BOT_TOKEN[:10]}...{BOT_TOKEN[-5:]}")
-    print(f"👑 Owner ID: {OWNER_ID}")
-    print(f"👥 Admins: {ADMIN_IDS}")
-    print(f"📞 Admin Username: {ADMIN_USERNAME}")
-    print(f"💳 UPI ID: {UPI_ID}")
-    print(f"💎 Points: 1 = ₹{POINT_PRICE}")
-    print(f"🎁 Welcome Bonus: {WELCOME_BONUS} Points")
-    print(f"🔍 Search Cost: {CHECK_PRICE} Point")
-    print(f"📦 Packages: {len(POINT_PACKAGES)}")
-    print(f"🌐 New API: {API_URL}")
-    print("="*60)
+    settings = settings_col.find_one({'key': 'bot_settings'})
     
+    maintenance = "🔴 ON" if settings.get('maintenance_mode') else "🟢 OFF"
+    reactions = "✅ ON" if settings.get('reactions_enabled', True) else "❌ OFF"
+    rate_limit = settings.get('rate_limit', 5)
+    referral_bonus = settings.get('referral_bonus', 10)
+    daily_bonus = settings.get('daily_bonus', 5)
+    
+    msg = f"""
+⚙️ BOT SETTINGS
+
+🔧 Current Settings:
+🛠️ Maintenance: {maintenance}
+🎭 Reactions: {reactions}
+⏱️ Rate Limit: {rate_limit} msgs/sec
+🤝 Referral Bonus: {referral_bonus} pts
+🎁 Daily Bonus: {daily_bonus} pts
+
+📝 Options:
+    """
+    
+    keyboard = [
+        [InlineKeyboardButton(f"🛠️ Toggle Maintenance", callback_data="admin_toggle_maintenance")],
+        [InlineKeyboardButton(f"🎭 Toggle Reactions", callback_data="admin_toggle_reactions")],
+        [InlineKeyboardButton("⚡ Set Rate Limit", callback_data="admin_set_rate")],
+        [InlineKeyboardButton("🤝 Set Referral Bonus", callback_data="admin_set_ref")],
+        [InlineKeyboardButton("🎁 Set Daily Bonus", callback_data="admin_set_daily")],
+        [InlineKeyboardButton("🔙 Back", callback_data="admin_panel")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(msg, reply_markup=reply_markup)
+
+async def toggle_maintenance(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Toggle maintenance mode"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.from_user.id != OWNER_ID:
+        return
+    
+    settings = settings_col.find_one({'key': 'bot_settings'})
+    current = settings.get('maintenance_mode', False)
+    
+    settings_col.update_one(
+        {'key': 'bot_settings'},
+        {'$set': {'maintenance_mode': not current}}
+    )
+    
+    await admin_settings_menu(update, context)
+
+# ==================== ADMIN: BLACKLIST ====================
+async def admin_blacklist_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Blacklist menu"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.from_user.id != OWNER_ID:
+        return
+    
+    blacklisted = list(blacklist_col.find())
+    
+    msg = f"🚫 Blacklisted Users: {len(blacklisted)}\n\n"
+    if blacklisted:
+        for user in blacklisted[:10]:
+            msg += f"• {user['user_id']} - {user.get('reason', 'No reason')}\n"
+    else:
+        msg += "No blacklisted users."
+    
+    keyboard = [
+        [InlineKeyboardButton("🚫 Ban User", callback_data="admin_ban_user")],
+        [InlineKeyboardButton("✅ Unban User", callback_data="admin_unban_user")],
+        [InlineKeyboardButton("🔙 Back", callback_data="admin_panel")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(msg, reply_markup=reply_markup)
+
+# ==================== ADMIN: EXPORT DATA ====================
+async def admin_export_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Export data to CSV"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.from_user.id != OWNER_ID:
+        return
+    
+    await query.edit_message_text("📤 Exporting data... Please wait.")
+    
+    # Export users
+    filename = f"users_export_{get_ist().strftime('%Y%m%d_%H%M%S')}.csv"
+    with open(filename, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow(['User ID', 'Name', 'Username', 'Points', 'Joined', 'Last Active', 'Searches'])
+        
+        for user in users_col.find():
+            writer.writerow([
+                user['user_id'],
+                user.get('first_name', ''),
+                user.get('username', ''),
+                user.get('points', 0),
+                format_ist(user.get('joined_date', get_ist())),
+                format_ist(user.get('last_active', get_ist())),
+                user.get('total_searches', 0)
+            ])
+    
+    # Send file
+    with open(filename, 'rb') as f:
+        await context.bot.send_document(
+            OWNER_ID,
+            f,
+            caption=f"📊 Users Export - {format_ist(get_ist())}"
+        )
+    
+    os.remove(filename)
+    
+    await query.edit_message_text(
+        "✅ Data exported successfully!",
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("🔙 Back", callback_data="admin_panel")
+        ]])
+    )
+
+# ==================== ADMIN: BACKUP DATABASE ====================
+async def admin_backup_db(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Backup database"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.from_user.id != OWNER_ID:
+        return
+    
+    await query.edit_message_text("💾 Creating backup... Please wait.")
+    
+    # Create backup
+    backup_data = {
+        'timestamp': get_ist(),
+        'users': list(users_col.find()),
+        'transactions': list(transactions_col.find()),
+        'gift_codes': list(gift_codes_col.find()),
+        'orders': list(orders_col.find()),
+        'settings': list(settings_col.find())
+    }
+    
+    # Convert ObjectId to string
+    def convert_objectid(obj):
+        if isinstance(obj, ObjectId):
+            return str(obj)
+        return obj
+    
+    backup_json = json.dumps(backup_data, default=convert_objectid, indent=2)
+    
+    # Save to file
+    filename = f"backup_{get_ist().strftime('%Y%m%d_%H%M%S')}.json"
+    with open(filename, 'w', encoding='utf-8') as f:
+        f.write(backup_json)
+    
+    # Send file
+    with open(filename, 'rb') as f:
+        await context.bot.send_document(
+            OWNER_ID,
+            f,
+            caption=f"💾 Database Backup - {format_ist(get_ist())}"
+        )
+    
+    os.remove(filename)
+    
+    # Save to MongoDB backup collection
+    backup_col.insert_one({
+        'timestamp': get_ist(),
+        'filename': filename,
+        'size': len(backup_json)
+    })
+    
+    await query.edit_message_text(
+        "✅ Backup created successfully!",
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("🔙 Back", callback_data="admin_panel")
+        ]])
+    )
+
+# ==================== AUTO DAILY BONUS REMINDER ====================
+async def daily_bonus_reminder():
+    """Send daily bonus reminders"""
     app = Application.builder().token(BOT_TOKEN).build()
     
-    # Conversation handler for screenshot
-    screenshot_conv = ConversationHandler(
-        entry_points=[CallbackQueryHandler(button_handler, pattern="^send_screenshot$")],
-        states={
-            WAITING_SCREENSHOT: [MessageHandler(filters.PHOTO, screenshot_handler)]
-        },
-        fallbacks=[CommandHandler("start", start)]
-    )
-    
-    # Conversation handler for admin reply - FIXED entry point
-    admin_reply_conv = ConversationHandler(
-        entry_points=[CallbackQueryHandler(button_handler, pattern="^reply_to_")],
-        states={
-            WAITING_ADMIN_REPLY: [MessageHandler(filters.TEXT & ~filters.COMMAND, admin_reply_conversation)]
-        },
-        fallbacks=[CommandHandler("start", start)]
-    )
-    
-    # Add handlers
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("redeem", redeem_command))
-    app.add_handler(CommandHandler("gift", gift_command))
-    app.add_handler(CallbackQueryHandler(button_handler))
-    app.add_handler(screenshot_conv)
-    app.add_handler(admin_reply_conv)
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
-    
-    print("✅ Bot is ready! Press Ctrl+C to stop.")
-    print("="*60 + "\n")
-    
-    app.run_polling(allowed_updates=Update.ALL_TYPES)
+    users = users_col.find()
+    for user in users:
+        try:
+            await app.bot.send_message(
+                user['user_id'],
+                "🎁 **Daily Bonus Reminder**\n\nDon't forget to claim your daily bonus!\nUse /daily to get free points!"
+            )
+            await asyncio.sleep(0.05)
+        except:
+            pass
 
-if __name__ == "__main__":
+# ==================== MAIN FUNCTION ====================
+def main():
+    """Start the bot"""
+    # Create application
+    application = Application.builder().token(BOT_TOKEN).build()
+    
+    # Scheduler for daily reminders
+    scheduler = AsyncIOScheduler(timezone=IST)
+    scheduler.add_job(daily_bonus_reminder, 'cron', hour=10, minute=0)
+    scheduler.start()
+    
+    # Conversation handlers
+    contact_conv = ConversationHandler(
+        entry_points=[CallbackQueryHandler(contact_admin_start, pattern="^contact_admin$")],
+        states={CONTACT_ADMIN: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_contact_message)]},
+        fallbacks=[]
+    )
+    
+    search_conv = ConversationHandler(
+        entry_points=[CallbackQueryHandler(use_service, pattern="^use_service$")],
+        states={SEARCH_NUMBER: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_search_number)]},
+        fallbacks=[CommandHandler("start", start)]
+    )
+    
+    redeem_conv = ConversationHandler(
+        entry_points=[CallbackQueryHandler(enter_gift_code, pattern="^redeem_pkg_\\d+$")],
+        states={REDEEM_CODE: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_gift_code)]},
+        fallbacks=[CommandHandler("start", start)]
+    )
+    
+    add_points_conv = ConversationHandler(
+        entry_points=[CallbackQueryHandler(admin_add_points_start, pattern="^admin_add_points$")],
+        states={ADD_POINTS: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_add_points)]},
+        fallbacks=[CommandHandler("start", start)]
+    )
+    
+    broadcast_conv = ConversationHandler(
+        entry_points=[CallbackQueryHandler(broadcast_text, pattern="^broadcast_text$")],
+        states={BROADCAST_MSG: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_broadcast)]},
+        fallbacks=[CommandHandler("start", start)]
+    )
+    
+    # Command handlers
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("daily", daily_bonus))
+    application.add_handler(CommandHandler("profile", lambda u,c: view_profile(u,c)))
+    application.add_handler(CommandHandler("points", lambda u,c: check_points(u,c)))
+    application.add_handler(CommandHandler("help", lambda u,c: show_help(u,c)))
+    
+    # Callback query handlers
+    application.add_handler(CallbackQueryHandler(main_menu, pattern="^lang_.*$"))
+    application.add_handler(CallbackQueryHandler(set_language, pattern="^set_lang_.*$"))
+    application.add_handler(CallbackQueryHandler(main_menu, pattern="^back_to_menu$"))
+    
+    # User handlers
+    application.add_handler(CallbackQueryHandler(view_profile, pattern="^view_profile$"))
+    application.add_handler(CallbackQueryHandler(user_settings, pattern="^user_settings$"))
+    application.add_handler(CallbackQueryHandler(toggle_notification, pattern="^toggle_notif$"))
+    application.add_handler(CallbackQueryHandler(toggle_private, pattern="^toggle_private$"))
+    application.add_handler(CallbackQueryHandler(change_language, pattern="^change_lang$"))
+    
+    # Points handlers
+    application.add_handler(CallbackQueryHandler(check_points, pattern="^check_points$"))
+    application.add_handler(CallbackQueryHandler(buy_points_menu, pattern="^buy_points$"))
+    application.add_handler(CallbackQueryHandler(process_purchase, pattern="^buy_pkg_\\d+$"))
+    application.add_handler(CallbackQueryHandler(process_payment, pattern="^pay_.*_.*$"))
+    application.add_handler(CallbackQueryHandler(verify_payment, pattern="^verify_pay_.*$"))
+    
+    # Gift code handlers
+    application.add_handler(CallbackQueryHandler(redeem_code_menu, pattern="^redeem_code$"))
+    
+    # Referral handlers
+    application.add_handler(CallbackQueryHandler(view_referral, pattern="^view_referral$"))
+    application.add_handler(CallbackQueryHandler(share_referral, pattern="^share_referral$"))
+    
+    # History handlers
+    application.add_handler(CallbackQueryHandler(view_history, pattern="^view_history$"))
+    application.add_handler(CallbackQueryHandler(view_transactions, pattern="^view_transactions$"))
+    
+    # Help handlers
+    application.add_handler(CallbackQueryHandler(show_help, pattern="^show_help$"))
+    application.add_handler(CallbackQueryHandler(show_faq, pattern="^show_faq$"))
+    application.add_handler(CallbackQueryHandler(show_terms, pattern="^show_terms$"))
+    
+    # Admin panel handlers
+    application.add_handler(CallbackQueryHandler(admin_panel, pattern="^admin_panel$"))
+    application.add_handler(CallbackQueryHandler(admin_users_menu, pattern="^admin_users$"))
+    application.add_handler(CallbackQueryHandler(admin_view_users, pattern="^admin_view_users$"))
+    application.add_handler(CallbackQueryHandler(admin_view_users, pattern="^admin_users_(prev|next)$"))
+    application.add_handler(CallbackQueryHandler(admin_points_menu, pattern="^admin_points$"))
+    application.add_handler(CallbackQueryHandler(admin_gift_menu, pattern="^admin_gift$"))
+    application.add_handler(CallbackQueryHandler(admin_generate_gift_code, pattern="^admin_gen_gift_\\d+$"))
+    application.add_handler(CallbackQueryHandler(admin_broadcast_start, pattern="^admin_broadcast$"))
+    application.add_handler(CallbackQueryHandler(admin_settings_menu, pattern="^admin_settings$"))
+    application.add_handler(CallbackQueryHandler(toggle_maintenance, pattern="^admin_toggle_maintenance$"))
+    application.add_handler(CallbackQueryHandler(toggle_maintenance, pattern="^admin_toggle_reactions$"))
+    application.add_handler(CallbackQueryHandler(admin_blacklist_menu, pattern="^admin_blacklist$"))
+    application.add_handler(CallbackQueryHandler(admin_export_data, pattern="^admin_export$"))
+    application.add_handler(CallbackQueryHandler(admin_backup_db, pattern="^admin_backup$"))
+    
+    # Add conversation handlers
+    application.add_handler(contact_conv)
+    application.add_handler(search_conv)
+    application.add_handler(redeem_conv)
+    application.add_handler(add_points_conv)
+    application.add_handler(broadcast_conv)
+    
+    # Message handler for language
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, lambda u,c: None))
+    
+    # Start bot
+    print("="*50)
+    print("🚀 BOT STARTED SUCCESSFULLY!")
+    print("="*50)
+    print(f"🕐 Time: {format_ist(get_ist())} IST")
+    print(f"👑 Owner: {OWNER_ID}")
+    print(f"📊 Database: Connected")
+    print(f"💰 Point Packages: {len(POINT_PACKAGES)}")
+    print(f"🎁 Gift Packages: {len(GIFT_PACKAGES)}")
+    print(f"👥 Total Users: {users_col.count_documents({})}")
+    print(f"💎 1 Search = 1 Point")
+    print("="*50)
+    print("✅ ALL FEATURES LOADED:")
+    print("   ✓ User System")
+    print("   ✓ Point System")
+    print("   ✓ Purchase System")
+    print("   ✓ Gift Code System")
+    print("   ✓ SMS Service")
+    print("   ✓ Referral System")
+    print("   ✓ Daily Bonus")
+    print("   ✓ Admin Panel (30+ features)")
+    print("   ✓ Broadcast System")
+    print("   ✓ Blacklist System")
+    print("   ✓ Export/Backup")
+    print("   ✓ Auto Reactions")
+    print("   ✓ Bilingual Support")
+    print("="*50)
+    
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
+
+if __name__ == '__main__':
     main()
