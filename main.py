@@ -3,11 +3,15 @@
 🤖 COMPLETE TELEGRAM BOT - ALL FEATURES WORKING
 ===========================================
 Developer: @VIP_X_OFFICIAL
-Version: 7.0 (FULLY FIXED)
+Version: 8.0 (FINAL)
 Features: 100+ Features Working
 Database: MongoDB (IST Timezone)
 Bot Token: 8432105036:AAF_hiRAwU7N2nCVWakv9pjb1zOT4yfc-zk
 Owner ID: 7459756974
+Admin Username: @VIP_X_OFFICIAL
+Welcome Bonus: 2 Points
+Referral Bonus: 2 Points
+Daily Bonus: 1 Point
 ===========================================
 """
 
@@ -37,12 +41,12 @@ from telegram.ext import (
 from telegram.constants import ParseMode
 
 # ==================== CONFIGURATION ====================
-BOT_TOKEN = "8624595085:AAFp_QabphVFnhIROWl2KlwRkjfwBL_Zx2A"
+BOT_TOKEN = "8612834168:AAFT1VX35aEpyEOMoszHf2ymrr2R4iP3gvQ"
 MONGODB_URI = "mongodb+srv://nikilsaxena843_db_user:3gF2wyT4IjsFt0cY@vipbot.puv6gfk.mongodb.net/?appName=vipbot"
 API_URL = "http://api.subhxcosmo.in/api"
 API_KEY = "suryanshHacker"
 OWNER_ID = 7459756974
-OWNER_USERNAME = "@VIP_X_OFFICIAL"
+OWNER_USERNAME = "@VIP_X_OFFICIAL"  # Updated admin username
 
 # India Timezone
 IST = timezone('Asia/Kolkata')
@@ -128,10 +132,10 @@ try:
     users_col.create_index('user_id', unique=True)
     gift_codes_col.create_index('code', unique=True)
     orders_col.create_index('order_id', unique=True)
-    referral_col.create_index('code', unique=True)  # Fixed: was referral_code
+    referral_col.create_index('code', unique=True)
     blacklist_col.create_index('user_id', unique=True)
     
-    # Default settings
+    # Default settings - UPDATED with new bonus values
     if not settings_col.find_one({'key': 'bot_settings'}):
         settings_col.insert_one({
             'key': 'bot_settings',
@@ -143,11 +147,21 @@ try:
             'api_key': API_KEY,
             'point_rate': 5,
             'min_withdraw': 100,
-            'referral_bonus': 10,
-            'daily_bonus': 5,
-            'welcome_bonus': 10,
+            'referral_bonus': 2,  # Changed from 10 to 2
+            'daily_bonus': 1,      # Changed from 5 to 1
+            'welcome_bonus': 2,    # Changed from 10 to 2
             'created_at': datetime.now(IST)
         })
+    else:
+        # Update existing settings with new values
+        settings_col.update_one(
+            {'key': 'bot_settings'},
+            {'$set': {
+                'referral_bonus': 2,
+                'daily_bonus': 1,
+                'welcome_bonus': 2
+            }}
+        )
     
     # Stats
     current_time = datetime.now(IST).strftime("%d-%m-%Y %I:%M:%S %p")
@@ -163,6 +177,12 @@ try:
     print(f"   ├─ orders: {orders_col.count_documents({})}")
     print(f"   ├─ referrals: {referral_col.count_documents({})}")
     print(f"   └─ search_history: {search_history_col.count_documents({})}")
+    print("="*50)
+    print(f"✅ BONUS SETTINGS UPDATED:")
+    print(f"   🎁 Welcome Bonus: 2 points")
+    print(f"   🤝 Referral Bonus: 2 points")
+    print(f"   🎁 Daily Bonus: 1 point")
+    print(f"   👑 Admin Username: {OWNER_USERNAME}")
     print("="*50)
     
 except Exception as e:
@@ -203,26 +223,26 @@ LANG = {
         'profile': "👤 प्रोफाइल\n\n🆔 आईडी: {}\n👤 नाम: {}\n📅 ज्वाइन: {}\n💰 पॉइंट्स: {}\n🔍 कुल सर्च: {}\n🎁 रिडीम: {}\n🤝 रेफरल: {}",
         'settings': "⚙️ सेटिंग्स\n\nभाषा, नोटिफिकेशन और प्राइवेसी सेटिंग्स",
         
-        # Referral
-        'referral': "🤝 रेफरल सिस्टम\n\nआपका रेफरल कोड: {}\nरेफरल लिंक: https://t.me/{}?start=ref_{}\n\nकमीशन: {} पॉइंट्स प्रति रेफरल\nकुल रेफरल: {}\nकुल कमीशन: {} पॉइंट्स",
+        # Referral - Updated with admin username
+        'referral': "🤝 रेफरल सिस्टम\n\nआपका रेफरल कोड: {}\nरेफरल लिंक: https://t.me/{}?start=ref_{}\n\nकमीशन: {} पॉइंट्स प्रति रेफरल\nकुल रेफरल: {}\nकुल कमीशन: {} पॉइंट्स\n\nएडमिन: {}",
         
         # Daily Bonus
         'daily_bonus': "🎁 डेली बोनस\n\nआपको {} पॉइंट्स मिले!\nअगला बोनस कल {} बजे",
         'already_claimed': "❌ आज का बोनस पहले ही ले चुके हो!\nअगला बोनस कल {} बजे",
         
         # Admin
-        'admin_panel': "👑 एडमिन पैनल\n\n🕐 {} IST",
+        'admin_panel': "👑 एडमिन पैनल\n\n🕐 {} IST\nएडमिन: {}",
         
-        # Contact
-        'contact_admin': "📝 अपना संदेश लिखें (एडमिन जल्दी जवाब देगा):",
+        # Contact - Updated with admin username
+        'contact_admin': "📝 अपना संदेश लिखें (एडमिन {} जल्दी जवाब देगा):",
         'msg_sent': "✅ संदेश भेज दिया गया!",
         
         # History
         'search_history': "📋 हाल की सर्च (पिछले 10):\n\n{}",
         'transaction_history': "📊 हाल के ट्रांजैक्शन:\n\n{}",
         
-        # Help
-        'help_text': "❓ मदद\n\n/start - शुरू करें\n/profile - प्रोफाइल\n/points - पॉइंट्स\n/buy - खरीदें\n/redeem - कोड रिडीम\n/referral - रेफरल\n/history - हिस्ट्री\n/settings - सेटिंग्स\n/help - मदद",
+        # Help - Updated with admin username
+        'help_text': "❓ मदद\n\n/start - शुरू करें\n/profile - प्रोफाइल\n/points - पॉइंट्स\n/buy - खरीदें\n/redeem - कोड रिडीम\n/referral - रेफरल\n/history - हिस्ट्री\n/settings - सेटिंग्स\n/help - मदद\n\nएडमिन: {}",
     },
     'en': {
         # Basic
@@ -239,7 +259,7 @@ LANG = {
         'buy_points': "🛒 Buy Points\n\nChoose package:",
         'insufficient_points': "❌ Insufficient points! You have {} points.",
         
-        # Search - FIXED: Now shows phone number from API
+        # Search
         'enter_id': "🆔 Enter Telegram User ID:\n\nExample: 7459756974",
         'invalid_id': "❌ Invalid ID! Enter numbers only.",
         'processing': "⏳ Processing... Please wait.",
@@ -256,26 +276,26 @@ LANG = {
         'profile': "👤 Profile\n\n🆔 ID: {}\n👤 Name: {}\n📅 Joined: {}\n💰 Points: {}\n🔍 Total Searches: {}\n🎁 Redeemed: {}\n🤝 Referrals: {}",
         'settings': "⚙️ Settings\n\nLanguage, Notifications & Privacy settings",
         
-        # Referral - FIXED: Removed markdown
-        'referral': "🤝 Referral System\n\nYour Referral Code: {}\nReferral Link: https://t.me/{}?start=ref_{}\n\nCommission: {} points per referral\nTotal Referrals: {}\nTotal Commission: {} points",
+        # Referral - Updated with admin username
+        'referral': "🤝 Referral System\n\nYour Referral Code: {}\nReferral Link: https://t.me/{}?start=ref_{}\n\nCommission: {} points per referral\nTotal Referrals: {}\nTotal Commission: {} points\n\nAdmin: {}",
         
         # Daily Bonus
         'daily_bonus': "🎁 Daily Bonus\n\nYou got {} points!\nNext bonus tomorrow at {}",
         'already_claimed': "❌ Already claimed today!\nNext bonus tomorrow at {}",
         
-        # Admin
-        'admin_panel': "👑 Admin Panel\n\n🕐 {} IST",
+        # Admin - Updated with admin username
+        'admin_panel': "👑 Admin Panel\n\n🕐 {} IST\nAdmin: {}",
         
-        # Contact
-        'contact_admin': "📝 Write your message (Admin will reply soon):",
+        # Contact - Updated with admin username
+        'contact_admin': "📝 Write your message (Admin {} will reply soon):",
         'msg_sent': "✅ Message sent to admin!",
         
         # History
         'search_history': "📋 Recent Searches (Last 10):\n\n{}",
         'transaction_history': "📊 Recent Transactions:\n\n{}",
         
-        # Help
-        'help_text': "❓ Help\n\n/start - Start bot\n/profile - View profile\n/points - Check points\n/buy - Buy points\n/redeem - Redeem code\n/referral - Referral system\n/history - Search history\n/settings - Settings\n/help - This help",
+        # Help - Updated with admin username
+        'help_text': "❓ Help\n\n/start - Start bot\n/profile - View profile\n/points - Check points\n/buy - Buy points\n/redeem - Redeem code\n/referral - Referral system\n/history - Search history\n/settings - Settings\n/help - This help\n\nAdmin: {}",
     }
 }
 
@@ -451,9 +471,9 @@ async def get_or_create_user(user_id, username=None, first_name=None):
                 {'$set': {'referral_code': ref_code}}
             )
         
-        # Welcome bonus
+        # Welcome bonus - UPDATED to 2 points
         settings = settings_col.find_one({'key': 'bot_settings'})
-        welcome_bonus = settings.get('welcome_bonus', 10) if settings else 10
+        welcome_bonus = settings.get('welcome_bonus', 2) if settings else 2
         await add_points(user_id, welcome_bonus, "Welcome bonus")
         
         return user_data
@@ -584,11 +604,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         update.effective_user.first_name
     )
     
-    # Handle referral
+    # Handle referral - UPDATED to 2 points
     if context.user_data.get('referred_by') and not user.get('referred_by'):
         referrer_id = context.user_data['referred_by']
         settings = settings_col.find_one({'key': 'bot_settings'})
-        bonus = settings.get('referral_bonus', 10) if settings else 10
+        bonus = settings.get('referral_bonus', 2) if settings else 2
         
         # Update referrer
         await add_points(referrer_id, bonus, f"Referral bonus for user {user_id}")
@@ -905,7 +925,7 @@ async def process_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Steps:\n"
         f"1️⃣ Open {method.upper()} app\n"
         f"2️⃣ Pay to: {upi_id}\n"
-        f"3️⃣ Send payment screenshot to admin\n"
+        f"3️⃣ Send payment screenshot to admin {OWNER_USERNAME}\n"
         f"4️⃣ Click 'I Paid' button\n\n"
         f"⚠️ Payment verify होने पर पॉइंट्स automatically मिल जाएंगे!"
     )
@@ -954,7 +974,7 @@ async def verify_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(OWNER_ID, admin_msg, reply_markup=reply_markup)
     
     await query.edit_message_text(
-        "✅ Payment notification sent to admin!\n"
+        f"✅ Payment notification sent to admin {OWNER_USERNAME}!\n"
         "Points will be added after verification."
     )
 
@@ -1010,7 +1030,6 @@ async def admin_reject_payment(update: Update, context: ContextTypes.DEFAULT_TYP
     await query.answer()
     
     if query.from_user.id != OWNER_ID:
-        await query.edit_message_text("❌ Unauthorized!")
         return
     
     order_id = query.data.split('_')[2]
@@ -1038,12 +1057,12 @@ async def admin_reject_payment(update: Update, context: ContextTypes.DEFAULT_TYP
             order['user_id'],
             f"❌ Payment Rejected!\n\n"
             f"Your payment of ₹{order['amount']} could not be verified.\n"
-            f"Please contact admin for more information."
+            f"Please contact admin {OWNER_USERNAME} for more information."
         )
     except:
         pass
 
-# ==================== SMS SERVICE - FIXED: Now shows phone number ====================
+# ==================== SMS SERVICE ====================
 async def use_service(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Use SMS service - Searches by Telegram ID"""
     query = update.callback_query
@@ -1075,7 +1094,7 @@ async def use_service(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return SEARCH_ID
 
 async def handle_search_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle Telegram ID input for search - FIXED: Shows phone number"""
+    """Handle Telegram ID input for search"""
     user_id = update.effective_user.id
     lang = get_user_lang(user_id)
     target_id = update.message.text.strip()
@@ -1143,7 +1162,7 @@ async def handle_search_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     {'$inc': {'total_searches': 1}}
                 )
                 
-                # Format result - FIXED: Now shows phone number
+                # Format result
                 msg = LANG[lang]['search_result'].format(
                     phone_number,
                     target_id,
@@ -1265,7 +1284,7 @@ async def handle_gift_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ==================== REFERRAL SYSTEM ====================
 async def view_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """View referral info - FIXED: No markdown"""
+    """View referral info"""
     query = update.callback_query
     await query.answer()
     
@@ -1279,7 +1298,7 @@ async def view_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ref_code = user.get('referral_code', '')
     bot_username = (await context.bot.get_me()).username
     settings = settings_col.find_one({'key': 'bot_settings'})
-    bonus = settings.get('referral_bonus', 10) if settings else 10
+    bonus = settings.get('referral_bonus', 2) if settings else 2
     
     # Get referral stats
     ref_data = referral_col.find_one({'user_id': user_id})
@@ -1300,7 +1319,8 @@ async def view_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ref_code,
             bonus,
             total_ref,
-            format_number(total_commission)
+            format_number(total_commission),
+            OWNER_USERNAME
         ),
         reply_markup=reply_markup
     )
@@ -1323,13 +1343,13 @@ async def share_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await query.edit_message_text(
-        f"🔗 Your Referral Link:\n{ref_link}\n\nClick Share to send to friends!",
+        f"🔗 Your Referral Link:\n{ref_link}\n\nClick Share to send to friends!\n\nAdmin: {OWNER_USERNAME}",
         reply_markup=reply_markup
     )
 
 # ==================== DAILY BONUS ====================
 async def daily_bonus(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Claim daily bonus"""
+    """Claim daily bonus - UPDATED to 1 point"""
     user_id = update.effective_user.id
     user = users_col.find_one({'user_id': user_id})
     lang = get_user_lang(user_id)
@@ -1352,9 +1372,9 @@ async def daily_bonus(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
     
-    # Give bonus
+    # Give bonus - 1 point
     settings = settings_col.find_one({'key': 'bot_settings'})
-    bonus = settings.get('daily_bonus', 5) if settings else 5
+    bonus = settings.get('daily_bonus', 1) if settings else 1
     
     new_balance = await add_points(user_id, bonus, "Daily bonus")
     
@@ -1372,7 +1392,7 @@ async def daily_bonus(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ==================== HISTORY ====================
 async def view_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """View search history - FIXED: Shows phone numbers"""
+    """View search history"""
     query = update.callback_query
     await query.answer()
     
@@ -1453,7 +1473,7 @@ async def show_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await query.edit_message_text(
-        LANG[lang]['help_text'],
+        LANG[lang]['help_text'].format(OWNER_USERNAME),
         reply_markup=reply_markup
     )
 
@@ -1466,19 +1486,22 @@ async def show_faq(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = get_user_lang(user_id)
     
     faq_text = (
-        "❓ FAQ\n\n"
-        "Q: Points कैसे खरीदें?\n"
-        "A: Buy Points पर क्लिक करें और पेमेंट करें\n\n"
-        "Q: 1 सर्च में कितने पॉइंट लगते हैं?\n"
-        "A: 1 सर्च = 1 पॉइंट\n\n"
-        "Q: क्या मैं किसी की Telegram ID search कर सकता हूं?\n"
-        "A: हां, आप किसी भी Telegram User ID की जानकारी प्राप्त कर सकते हैं\n\n"
-        "Q: रेफरल से कितने पॉइंट मिलते हैं?\n"
-        "A: 10 पॉइंट प्रति रेफरल\n\n"
-        "Q: डेली बोनस कितने बजे मिलता है?\n"
-        "A: हर 24 घंटे में एक बार\n\n"
-        "Q: पेमेंट वेरिफाई होने में कितना समय?\n"
-        "A: 5-10 मिनट"
+        f"❓ FAQ\n\n"
+        f"Q: Points कैसे खरीदें?\n"
+        f"A: Buy Points पर क्लिक करें और पेमेंट करें\n\n"
+        f"Q: 1 सर्च में कितने पॉइंट लगते हैं?\n"
+        f"A: 1 सर्च = 1 पॉइंट\n\n"
+        f"Q: क्या मैं किसी की Telegram ID search कर सकता हूं?\n"
+        f"A: हां, आप किसी भी Telegram User ID की जानकारी प्राप्त कर सकते हैं\n\n"
+        f"Q: रेफरल से कितने पॉइंट मिलते हैं?\n"
+        f"A: 2 पॉइंट प्रति रेफरल\n\n"
+        f"Q: वेलकम बोनस कितने पॉइंट मिलते हैं?\n"
+        f"A: 2 पॉइंट\n\n"
+        f"Q: डेली बोनस कितने पॉइंट मिलते हैं?\n"
+        f"A: 1 पॉइंट प्रतिदिन\n\n"
+        f"Q: पेमेंट वेरिफाई होने में कितना समय?\n"
+        f"A: 5-10 मिनट\n\n"
+        f"एडमिन: {OWNER_USERNAME}"
     )
     
     keyboard = [[InlineKeyboardButton(LANG[lang]['back'], callback_data="show_help")]]
@@ -1495,14 +1518,15 @@ async def show_terms(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = get_user_lang(user_id)
     
     terms_text = (
-        "📝 Terms & Conditions\n\n"
-        "1. No refund after points added\n"
-        "2. Wrong ID = point deducted\n"
-        "3. Multiple accounts = ban\n"
-        "4. API misuse = permanent ban\n"
-        "5. Points have no cash value\n"
-        "6. We can change prices anytime\n"
-        "7. Owner decision is final"
+        f"📝 Terms & Conditions\n\n"
+        f"1. No refund after points added\n"
+        f"2. Wrong ID = point deducted\n"
+        f"3. Multiple accounts = ban\n"
+        f"4. API misuse = permanent ban\n"
+        f"5. Points have no cash value\n"
+        f"6. We can change prices anytime\n"
+        f"7. Owner decision is final\n\n"
+        f"एडमिन: {OWNER_USERNAME}"
     )
     
     keyboard = [[InlineKeyboardButton(LANG[lang]['back'], callback_data="show_help")]]
@@ -1520,7 +1544,7 @@ async def contact_admin_start(update: Update, context: ContextTypes.DEFAULT_TYPE
     lang = get_user_lang(user_id)
     
     await query.edit_message_text(
-        LANG[lang]['contact_admin'],
+        LANG[lang]['contact_admin'].format(OWNER_USERNAME),
         reply_markup=InlineKeyboardMarkup([[
             InlineKeyboardButton(LANG[lang]['back'], callback_data="back_to_menu")
         ]])
@@ -1589,7 +1613,7 @@ async def handle_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE)
     try:
         await context.bot.send_message(
             user_id,
-            f"📨 Reply from Admin:\n\n{message}"
+            f"📨 Reply from Admin {OWNER_USERNAME}:\n\n{message}"
         )
         await update.message.reply_text("✅ Reply sent successfully!")
     except:
@@ -1629,6 +1653,7 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     stats = f"""
 👑 ADMIN PANEL
 🕐 {format_ist(get_ist())} IST
+👤 Admin: {OWNER_USERNAME}
 
 📊 STATISTICS:
 👥 Total Users: {total_users}
@@ -1640,6 +1665,9 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 💵 Total Revenue: ₹{format_number(total_revenue)}
 
 ⚙️ MAINTENANCE: {maintenance}
+🎁 Welcome Bonus: 2 Points
+🤝 Referral Bonus: 2 Points
+🎁 Daily Bonus: 1 Point
 
 🔧 OPTIONS:
     """
@@ -1896,7 +1924,7 @@ async def handle_add_points(update: Update, context: ContextTypes.DEFAULT_TYPE):
         lang = get_user_lang(target_id)
         await context.bot.send_message(
             target_id,
-            f"🎉 Admin ने आपके {points} पॉइंट्स जोड़ दिए!\nनया बैलेंस: {format_number(new_balance)}"
+            f"🎉 Admin {OWNER_USERNAME} ने आपके {points} पॉइंट्स जोड़ दिए!\nनया बैलेंस: {format_number(new_balance)}"
         )
     except:
         pass
@@ -1957,7 +1985,7 @@ async def handle_remove_points(update: Update, context: ContextTypes.DEFAULT_TYP
         lang = get_user_lang(target_id)
         await context.bot.send_message(
             target_id,
-            f"⚠️ Admin ने आपके {points} पॉइंट्स कम कर दिए!\nनया बैलेंस: {format_number(new_balance)}"
+            f"⚠️ Admin {OWNER_USERNAME} ने आपके {points} पॉइंट्स कम कर दिए!\nनया बैलेंस: {format_number(new_balance)}"
         )
     except:
         pass
@@ -2051,7 +2079,8 @@ async def admin_generate_gift_code(update: Update, context: ContextTypes.DEFAULT
         f"Points: {points}\n"
         f"Package: {GIFT_PACKAGES[str(points)]['emoji']}\n"
         f"Created: {format_ist(get_ist())}\n\n"
-        f"Share this code with users!",
+        f"Share this code with users!\n"
+        f"Admin: {OWNER_USERNAME}",
         reply_markup=InlineKeyboardMarkup([[
             InlineKeyboardButton("🎁 Generate More", callback_data="admin_gift"),
             InlineKeyboardButton("🔙 Admin Panel", callback_data="admin_panel")
@@ -2149,7 +2178,7 @@ async def handle_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             await context.bot.send_message(
                 user['user_id'],
-                f"📢 ANNOUNCEMENT\n\n{message}"
+                f"📢 ANNOUNCEMENT from {OWNER_USERNAME}\n\n{message}"
             )
             success += 1
             await asyncio.sleep(0.05)  # Rate limit
@@ -2181,6 +2210,7 @@ async def admin_orders_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     msg = f"""
 📈 Orders & Transactions
+👤 Admin: {OWNER_USERNAME}
 
 📊 Order Statistics:
 ⏳ Pending: {pending}
@@ -2288,11 +2318,13 @@ async def admin_settings_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
     maintenance = "🔴 ON" if settings.get('maintenance_mode') else "🟢 OFF"
     reactions = "✅ ON" if settings.get('reactions_enabled', True) else "❌ OFF"
     rate_limit = settings.get('rate_limit', 5)
-    referral_bonus = settings.get('referral_bonus', 10)
-    daily_bonus = settings.get('daily_bonus', 5)
+    referral_bonus = settings.get('referral_bonus', 2)
+    daily_bonus = settings.get('daily_bonus', 1)
+    welcome_bonus = settings.get('welcome_bonus', 2)
     
     msg = f"""
 ⚙️ BOT SETTINGS
+👤 Admin: {OWNER_USERNAME}
 
 🔧 Current Settings:
 🛠️ Maintenance: {maintenance}
@@ -2300,6 +2332,7 @@ async def admin_settings_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
 ⏱️ Rate Limit: {rate_limit} msgs/sec
 🤝 Referral Bonus: {referral_bonus} pts
 🎁 Daily Bonus: {daily_bonus} pts
+🎁 Welcome Bonus: {welcome_bonus} pts
 
 📝 Options:
     """
@@ -2405,7 +2438,7 @@ async def set_referral_bonus_start(update: Update, context: ContextTypes.DEFAULT
         return
     
     await query.edit_message_text(
-        "🤝 Enter new referral bonus points:\nCurrent: 10\nExample: 15",
+        "🤝 Enter new referral bonus points:\nCurrent: 2\nExample: 3",
         reply_markup=InlineKeyboardMarkup([[
             InlineKeyboardButton("🔙 Cancel", callback_data="admin_settings")
         ]])
@@ -2449,7 +2482,7 @@ async def set_daily_bonus_start(update: Update, context: ContextTypes.DEFAULT_TY
         return
     
     await query.edit_message_text(
-        "🎁 Enter new daily bonus points:\nCurrent: 5\nExample: 10",
+        "🎁 Enter new daily bonus points:\nCurrent: 1\nExample: 2",
         reply_markup=InlineKeyboardMarkup([[
             InlineKeyboardButton("🔙 Cancel", callback_data="admin_settings")
         ]])
@@ -2562,7 +2595,7 @@ async def admin_ban_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         await context.bot.send_message(
             target_id,
-            "🚫 You have been banned from using this bot!"
+            f"🚫 You have been banned from using this bot by {OWNER_USERNAME}!"
         )
     except:
         pass
@@ -2583,7 +2616,7 @@ async def admin_unban_user_start(update: Update, context: ContextTypes.DEFAULT_T
             InlineKeyboardButton("🔙 Cancel", callback_data="admin_blacklist")
         ]])
     )
-    return BAN_USER  # Reusing BAN_USER state
+    return BAN_USER
 
 async def admin_unban_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Unban user"""
@@ -2606,7 +2639,7 @@ async def admin_unban_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             await context.bot.send_message(
                 target_id,
-                "✅ You have been unbanned! You can now use the bot again."
+                f"✅ You have been unbanned by {OWNER_USERNAME}! You can now use the bot again."
             )
         except:
             pass
@@ -2665,7 +2698,7 @@ async def admin_warn_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
         lang = get_user_lang(target_id)
         await context.bot.send_message(
             target_id,
-            f"⚠️ Warning!\n\nYou have received a warning.\nTotal warnings: {new_warnings}\n\nPlease follow the rules to avoid being banned."
+            f"⚠️ Warning from {OWNER_USERNAME}!\n\nYou have received a warning.\nTotal warnings: {new_warnings}\n\nPlease follow the rules to avoid being banned."
         )
     except:
         pass
@@ -2706,7 +2739,7 @@ async def admin_export_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_document(
             OWNER_ID,
             f,
-            caption=f"📊 Users Export - {format_ist(get_ist())}"
+            caption=f"📊 Users Export - {format_ist(get_ist())}\nAdmin: {OWNER_USERNAME}"
         )
     
     os.remove(filename)
@@ -2759,7 +2792,7 @@ async def admin_backup_db(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_document(
             OWNER_ID,
             f,
-            caption=f"💾 Database Backup - {format_ist(get_ist())}"
+            caption=f"💾 Database Backup - {format_ist(get_ist())}\nAdmin: {OWNER_USERNAME}"
         )
     
     os.remove(filename)
@@ -2788,7 +2821,7 @@ async def daily_bonus_reminder():
         try:
             await app.bot.send_message(
                 user['user_id'],
-                "🎁 Daily Bonus Reminder\n\nDon't forget to claim your daily bonus!\nUse /daily to get free points!"
+                f"🎁 Daily Bonus Reminder from {OWNER_USERNAME}\n\nDon't forget to claim your daily bonus!\nUse /daily to get 1 free point!"
             )
             await asyncio.sleep(0.05)
         except:
@@ -3000,11 +3033,17 @@ def main():
     print("="*50)
     print(f"🕐 Time: {format_ist(get_ist())} IST")
     print(f"👑 Owner: {OWNER_ID}")
+    print(f"👤 Admin Username: {OWNER_USERNAME}")
     print(f"📊 Database: Connected")
     print(f"💰 Point Packages: {len(POINT_PACKAGES)}")
     print(f"🎁 Gift Packages: {len(GIFT_PACKAGES)}")
     print(f"👥 Total Users: {users_col.count_documents({})}")
     print(f"💎 1 Search = 1 Point (by Telegram ID)")
+    print("="*50)
+    print("✅ BONUS SETTINGS:")
+    print(f"   🎁 Welcome Bonus: 2 points")
+    print(f"   🤝 Referral Bonus: 2 points")
+    print(f"   🎁 Daily Bonus: 1 point")
     print("="*50)
     print("✅ ALL FEATURES LOADED AND WORKING:")
     print("   ✓ User System")
@@ -3024,6 +3063,7 @@ def main():
     print("   ✓ Payment Verification")
     print("   ✓ All Admin Buttons Working")
     print("   ✓ Settings Working Separately")
+    print("   ✓ Admin Username Displayed Everywhere")
     print("="*50)
     
     application.run_polling(allowed_updates=Update.ALL_TYPES)
