@@ -2,10 +2,12 @@
 ===========================================
 🤖 COMPLETE TELEGRAM BOT - ALL FEATURES
 ===========================================
-Developer:@VIP_X_OFFICIAL
-Version: 4.0 (ULTIMATE)
-Features: 100+ Features
+Developer: @VIP_X_OFFICIAL
+Version: 5.0 (FINAL FIXED)
+Features: 100+ Features Working
 Database: MongoDB (IST Timezone)
+Bot Token: 8432105036:AAF_hiRAwU7N2nCVWakv9pjb1zOT4yfc-zk
+Owner ID: 7459756974
 ===========================================
 """
 
@@ -270,6 +272,85 @@ LANG = {
         'help_text': "❓ Help\n\n/start - Start bot\n/profile - View profile\n/points - Check points\n/buy - Buy points\n/redeem - Redeem code\n/referral - Referral system\n/history - Search history\n/settings - Settings\n/help - This help",
     }
 }
+
+# ==================== LANGUAGE FUNCTIONS ====================
+async def set_language(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Set user language"""
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = query.from_user.id
+    lang = query.data.split('_')[2]  # set_lang_hi or set_lang_en
+    
+    # Update database
+    users_col.update_one(
+        {'user_id': user_id},
+        {'$set': {'language': lang}}
+    )
+    
+    # Get user's name for main menu
+    user = users_col.find_one({'user_id': user_id})
+    name = user.get('first_name', 'User') if user else 'User'
+    points = user.get('points', 0) if user else 0
+    searches = user.get('total_searches', 0) if user else 0
+    
+    # Confirmation message
+    if lang == 'hi':
+        text = "✅ भाषा हिंदी में बदल दी गई!"
+    else:
+        text = "✅ Language changed to English!"
+    
+    # Create main menu buttons
+    keyboard = [
+        [
+            InlineKeyboardButton("💰 Points", callback_data="check_points"),
+            InlineKeyboardButton("🛒 Buy", callback_data="buy_points")
+        ],
+        [
+            InlineKeyboardButton("📱 Search", callback_data="use_service"),
+            InlineKeyboardButton("🎁 Redeem", callback_data="redeem_code")
+        ],
+        [
+            InlineKeyboardButton("👤 Profile", callback_data="view_profile"),
+            InlineKeyboardButton("🤝 Referral", callback_data="view_referral")
+        ],
+        [
+            InlineKeyboardButton("📋 History", callback_data="view_history"),
+            InlineKeyboardButton("⚙️ Settings", callback_data="user_settings")
+        ],
+        [
+            InlineKeyboardButton("📞 Contact", callback_data="contact_admin"),
+            InlineKeyboardButton("❓ Help", callback_data="show_help")
+        ]
+    ]
+    
+    # Admin button
+    if user_id == OWNER_ID:
+        keyboard.append([InlineKeyboardButton("👑 ADMIN PANEL", callback_data="admin_panel")])
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(
+        f"{text}\n\n{LANG[lang]['main_menu'].format(name, format_number(points), searches)}",
+        reply_markup=reply_markup
+    )
+
+async def change_language(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Show language selection menu"""
+    query = update.callback_query
+    await query.answer()
+    
+    keyboard = [
+        [InlineKeyboardButton("🇮🇳 हिंदी", callback_data="set_lang_hi"),
+         InlineKeyboardButton("🇬🇧 English", callback_data="set_lang_en")],
+        [InlineKeyboardButton("🔙 Back", callback_data="back_to_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await query.edit_message_text(
+        "🌐 Select Language / भाषा चुनें:",
+        reply_markup=reply_markup
+    )
 
 # ==================== HELPER FUNCTIONS ====================
 def get_ist():
@@ -780,7 +861,7 @@ async def process_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"2️⃣ Pay to: {upi_id}\n"
         f"3️⃣ Send payment screenshot\n"
         f"4️⃣ Click 'I Paid' button\n\n"
-        f"⚠️ Payment verify होने पर पॉइंट्स自动 मिल जाएंगे!"
+        f"⚠️ Payment verify होने पर पॉइंट्स automatically मिल जाएंगे!"
     )
     
     keyboard = [
@@ -1721,6 +1802,24 @@ async def toggle_maintenance(update: Update, context: ContextTypes.DEFAULT_TYPE)
     
     await admin_settings_menu(update, context)
 
+async def toggle_reactions(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Toggle reactions"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.from_user.id != OWNER_ID:
+        return
+    
+    settings = settings_col.find_one({'key': 'bot_settings'})
+    current = settings.get('reactions_enabled', True)
+    
+    settings_col.update_one(
+        {'key': 'bot_settings'},
+        {'$set': {'reactions_enabled': not current}}
+    )
+    
+    await admin_settings_menu(update, context)
+
 # ==================== ADMIN: BLACKLIST ====================
 async def admin_blacklist_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Blacklist menu"""
@@ -1962,7 +2061,7 @@ def main():
     application.add_handler(CallbackQueryHandler(admin_broadcast_start, pattern="^admin_broadcast$"))
     application.add_handler(CallbackQueryHandler(admin_settings_menu, pattern="^admin_settings$"))
     application.add_handler(CallbackQueryHandler(toggle_maintenance, pattern="^admin_toggle_maintenance$"))
-    application.add_handler(CallbackQueryHandler(toggle_maintenance, pattern="^admin_toggle_reactions$"))
+    application.add_handler(CallbackQueryHandler(toggle_reactions, pattern="^admin_toggle_reactions$"))
     application.add_handler(CallbackQueryHandler(admin_blacklist_menu, pattern="^admin_blacklist$"))
     application.add_handler(CallbackQueryHandler(admin_export_data, pattern="^admin_export$"))
     application.add_handler(CallbackQueryHandler(admin_backup_db, pattern="^admin_backup$"))
