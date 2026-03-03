@@ -909,7 +909,7 @@ async def process_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     
     # Payment instructions
-    upi_id = "nikilsaxena843@okhdfcbank"
+    upi_id = "nanhin.3@ptaxis"
     
     if method == "razor":
         instructions = f"🔴 RAZORPAY PAYMENT\n\n"
