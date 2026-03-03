@@ -1,44 +1,13 @@
-# Telegram Bot Core
 python-telegram-bot==20.7
-
-# Database
 pymongo==4.6.1
-
-# HTTP Requests
 requests==2.31.0
-
-# Timezone
 pytz==2023.3
-
-# Scheduling
 apscheduler==3.10.4
-
-# Web Server (for future payment webhooks)
 flask==3.0.0
-
-# Utilities
 python-dotenv==1.0.0
 colorama==0.4.6
 tqdm==4.66.1
-
-# Data Processing
 pandas==2.1.4
 openpyxl==3.1.2
-
-# Security
 cryptography==41.0.7
-
-# Optional - For better performance
-ujson==5.9.0
-orjson==3.9.10
-
-# Optional - For rate limiting
-redis==5.0.1
-
-# Optional - For caching
-cachetools==5.3.2
-
-# Development Tools (Optional)
-black==23.12.1
-pylint==3.0.3
-pytest==7.4.4
+gunicorn==21.2.0
