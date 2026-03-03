@@ -3,7 +3,7 @@
 🤖 COMPLETE TELEGRAM BOT - ALL FEATURES WORKING
 ===========================================
 Developer: @VIP_X_OFFICIAL
-Version: 6.0 (FULLY FIXED)
+Version: 7.0 (FULLY FIXED)
 Features: 100+ Features Working
 Database: MongoDB (IST Timezone)
 Bot Token: 8432105036:AAF_hiRAwU7N2nCVWakv9pjb1zOT4yfc-zk
@@ -82,7 +82,7 @@ REACTIONS = ["❤️‍🔥", "💀", "😈", "☠️", "💘", "💝", "💕", 
     BROADCAST_PHOTO,
     BROADCAST_VIDEO,
     ADD_REFERRAL,
-    SEARCH_ID,  # Changed from SEARCH_NUMBER to SEARCH_ID
+    SEARCH_ID,
     REDEEM_CODE,
     BUY_POINTS,
     USER_SETTINGS,
@@ -102,7 +102,8 @@ REACTIONS = ["❤️‍🔥", "💀", "😈", "☠️", "💘", "💝", "💕", 
     SET_RATE_LIMIT,
     SET_REFERRAL_BONUS,
     SET_DAILY_BONUS,
-) = range(28)
+    ADMIN_REPLY,
+) = range(29)
 
 # ==================== DATABASE CONNECTION ====================
 try:
@@ -127,7 +128,7 @@ try:
     users_col.create_index('user_id', unique=True)
     gift_codes_col.create_index('code', unique=True)
     orders_col.create_index('order_id', unique=True)
-    referral_col.create_index('referral_code', unique=True)
+    referral_col.create_index('code', unique=True)  # Fixed: was referral_code
     blacklist_col.create_index('user_id', unique=True)
     
     # Default settings
@@ -185,12 +186,12 @@ LANG = {
         'buy_points': "🛒 पॉइंट्स खरीदें\n\nपैकेज चुनें:",
         'insufficient_points': "❌ अपर्याप्त पॉइंट्स! आपके पास {} पॉइंट्स हैं।",
         
-        # Search - Changed to Telegram ID
-        'enter_id': "🆔 Telegram User ID दर्ज करें:\n\nExample: 7459756974",
+        # Search
+        'enter_id': "🆔 Telegram User ID दर्ज करें:\n\nउदाहरण: 7459756974",
         'invalid_id': "❌ अमान्य ID! केवल numbers दर्ज करें।",
         'processing': "⏳ प्रोसेसिंग... कृपया प्रतीक्षा करें।",
         'api_error': "❌ API त्रुटि! बाद में प्रयास करें।",
-        'search_result': "✅ सफल!\n\n🆔 Telegram ID: {}\n👤 Name: {}\n🌍 देश: {}\n📞 कोड: {}\n\n💎 बचे पॉइंट्स: {}\n🕐 समय: {}",
+        'search_result': "✅ सफल!\n\n📱 फोन नंबर: {}\n🆔 Telegram ID: {}\n👤 नाम: {}\n🌍 देश: {}\n📞 कोड: {}\n\n💎 बचे पॉइंट्स: {}\n🕐 समय: {}",
         
         # Gift Codes
         'gift_packages': "🎁 गिफ्ट कोड पैकेज:\nकितने पॉइंट्स का कोड चाहिए?",
@@ -203,7 +204,7 @@ LANG = {
         'settings': "⚙️ सेटिंग्स\n\nभाषा, नोटिफिकेशन और प्राइवेसी सेटिंग्स",
         
         # Referral
-        'referral': "🤝 रेफरल सिस्टम\n\nआपका रेफरल कोड: `{}`\nरेफरल लिंक: https://t.me/{}?start={}\n\nकमीशन: {} पॉइंट्स प्रति रेफरल\nकुल रेफरल: {}\nकुल कमीशन: {} पॉइंट्स",
+        'referral': "🤝 रेफरल सिस्टम\n\nआपका रेफरल कोड: {}\nरेफरल लिंक: https://t.me/{}?start=ref_{}\n\nकमीशन: {} पॉइंट्स प्रति रेफरल\nकुल रेफरल: {}\nकुल कमीशन: {} पॉइंट्स",
         
         # Daily Bonus
         'daily_bonus': "🎁 डेली बोनस\n\nआपको {} पॉइंट्स मिले!\nअगला बोनस कल {} बजे",
@@ -238,12 +239,12 @@ LANG = {
         'buy_points': "🛒 Buy Points\n\nChoose package:",
         'insufficient_points': "❌ Insufficient points! You have {} points.",
         
-        # Search - Changed to Telegram ID
+        # Search - FIXED: Now shows phone number from API
         'enter_id': "🆔 Enter Telegram User ID:\n\nExample: 7459756974",
         'invalid_id': "❌ Invalid ID! Enter numbers only.",
         'processing': "⏳ Processing... Please wait.",
         'api_error': "❌ API Error! Try again later.",
-        'search_result': "✅ Success!\n\n🆔 Telegram ID: {}\n👤 Name: {}\n🌍 Country: {}\n📞 Code: {}\n\n💎 Remaining: {}\n🕐 Time: {}",
+        'search_result': "✅ Success!\n\n📱 Phone Number: {}\n🆔 Telegram ID: {}\n👤 Name: {}\n🌍 Country: {}\n📞 Code: {}\n\n💎 Remaining Points: {}\n🕐 Time: {}",
         
         # Gift Codes
         'gift_packages': "🎁 Gift Code Packages:\nHow many points code?",
@@ -255,8 +256,8 @@ LANG = {
         'profile': "👤 Profile\n\n🆔 ID: {}\n👤 Name: {}\n📅 Joined: {}\n💰 Points: {}\n🔍 Total Searches: {}\n🎁 Redeemed: {}\n🤝 Referrals: {}",
         'settings': "⚙️ Settings\n\nLanguage, Notifications & Privacy settings",
         
-        # Referral
-        'referral': "🤝 Referral System\n\nYour Referral Code: `{}`\nReferral Link: https://t.me/{}?start={}\n\nCommission: {} points per referral\nTotal Referrals: {}\nTotal Commission: {} points",
+        # Referral - FIXED: Removed markdown
+        'referral': "🤝 Referral System\n\nYour Referral Code: {}\nReferral Link: https://t.me/{}?start=ref_{}\n\nCommission: {} points per referral\nTotal Referrals: {}\nTotal Commission: {} points",
         
         # Daily Bonus
         'daily_bonus': "🎁 Daily Bonus\n\nYou got {} points!\nNext bonus tomorrow at {}",
@@ -392,7 +393,7 @@ def generate_order_id():
 
 def generate_referral_code():
     """Generate unique referral code"""
-    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+    return 'REF' + ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
 
 # ==================== USER FUNCTIONS ====================
 async def get_or_create_user(user_id, username=None, first_name=None):
@@ -402,8 +403,6 @@ async def get_or_create_user(user_id, username=None, first_name=None):
     if not user:
         # Create referral code
         ref_code = generate_referral_code()
-        while referral_col.find_one({'code': ref_code}):
-            ref_code = generate_referral_code()
         
         # Create user
         user_data = {
@@ -431,12 +430,26 @@ async def get_or_create_user(user_id, username=None, first_name=None):
         users_col.insert_one(user_data)
         
         # Add referral code to referral collection
-        referral_col.insert_one({
-            'code': ref_code,
-            'user_id': user_id,
-            'created_at': get_ist(),
-            'used_by': []
-        })
+        try:
+            referral_col.insert_one({
+                'code': ref_code,
+                'user_id': user_id,
+                'created_at': get_ist(),
+                'used_by': []
+            })
+        except:
+            # If duplicate, generate new one
+            ref_code = generate_referral_code() + '2'
+            referral_col.insert_one({
+                'code': ref_code,
+                'user_id': user_id,
+                'created_at': get_ist(),
+                'used_by': []
+            })
+            users_col.update_one(
+                {'user_id': user_id},
+                {'$set': {'referral_code': ref_code}}
+            )
         
         # Welcome bonus
         settings = settings_col.find_one({'key': 'bot_settings'})
@@ -886,9 +899,9 @@ async def process_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
         instructions = f"🟢 GPAY PAYMENT\n\n"
     
     instructions += (
-        f"Order: #{order_id}\n"
+        f"Order: {order_id}\n"
         f"Amount: ₹{order['amount']}\n"
-        f"UPI ID: `{upi_id}`\n\n"
+        f"UPI ID: {upi_id}\n\n"
         f"Steps:\n"
         f"1️⃣ Open {method.upper()} app\n"
         f"2️⃣ Pay to: {upi_id}\n"
@@ -905,7 +918,6 @@ async def process_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await query.edit_message_text(
         instructions,
-        parse_mode=ParseMode.MARKDOWN,
         reply_markup=reply_markup
     )
 
@@ -925,7 +937,7 @@ async def verify_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Notify admin
     admin_msg = (
         f"💰 PAYMENT VERIFICATION REQUIRED\n\n"
-        f"Order: #{order_id}\n"
+        f"Order: {order_id}\n"
         f"User: {user_id}\n"
         f"Points: {order['points']}\n"
         f"Amount: ₹{order['amount']}\n"
@@ -984,11 +996,10 @@ async def admin_approve_payment(update: Update, context: ContextTypes.DEFAULT_TY
         lang = get_user_lang(order['user_id'])
         await context.bot.send_message(
             order['user_id'],
-            f"✅ **Payment Approved!**\n\n"
+            f"✅ Payment Approved!\n\n"
             f"Your payment of ₹{order['amount']} has been verified.\n"
             f"{order['points']} points added to your account.\n"
-            f"New Balance: {format_number(new_balance)}",
-            parse_mode=ParseMode.MARKDOWN
+            f"New Balance: {format_number(new_balance)}"
         )
     except:
         pass
@@ -1025,17 +1036,16 @@ async def admin_reject_payment(update: Update, context: ContextTypes.DEFAULT_TYP
     try:
         await context.bot.send_message(
             order['user_id'],
-            f"❌ **Payment Rejected!**\n\n"
+            f"❌ Payment Rejected!\n\n"
             f"Your payment of ₹{order['amount']} could not be verified.\n"
-            f"Please contact admin for more information.",
-            parse_mode=ParseMode.MARKDOWN
+            f"Please contact admin for more information."
         )
     except:
         pass
 
-# ==================== SMS SERVICE - UPDATED TO USE TELEGRAM ID ====================
+# ==================== SMS SERVICE - FIXED: Now shows phone number ====================
 async def use_service(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Use SMS service - Now searches by Telegram ID"""
+    """Use SMS service - Searches by Telegram ID"""
     query = update.callback_query
     await query.answer()
     
@@ -1065,7 +1075,7 @@ async def use_service(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return SEARCH_ID
 
 async def handle_search_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle Telegram ID input for search"""
+    """Handle Telegram ID input for search - FIXED: Shows phone number"""
     user_id = update.effective_user.id
     lang = get_user_lang(user_id)
     target_id = update.message.text.strip()
@@ -1106,11 +1116,23 @@ async def handle_search_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 target_user = users_col.find_one({'user_id': target_id})
                 target_name = target_user.get('first_name', 'Unknown') if target_user else 'Not Registered'
                 
+                # Get phone number from API response
+                phone_number = "Not Available"
+                country = "India"
+                country_code = "+91"
+                
+                if data.get('success') and data.get('result'):
+                    result = data['result']
+                    phone_number = result.get('number', 'Not Available')
+                    country = result.get('country', 'India')
+                    country_code = result.get('country_code', '+91')
+                
                 # Save to history
                 search_history_col.insert_one({
                     'user_id': user_id,
                     'target_id': target_id,
                     'target_name': target_name,
+                    'phone_number': phone_number,
                     'result': data,
                     'timestamp': get_ist()
                 })
@@ -1121,19 +1143,16 @@ async def handle_search_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     {'$inc': {'total_searches': 1}}
                 )
                 
-                # Format result
-                if data.get('success') and data.get('result'):
-                    result = data['result']
-                    msg = LANG[lang]['search_result'].format(
-                        target_id,
-                        target_name,
-                        result.get('country', 'India'),
-                        result.get('country_code', '+91'),
-                        format_number(new_balance),
-                        format_ist(get_ist())
-                    )
-                else:
-                    msg = f"✅ Success!\n\n🆔 Telegram ID: {target_id}\n👤 Name: {target_name}\n\n💎 Remaining: {format_number(new_balance)}"
+                # Format result - FIXED: Now shows phone number
+                msg = LANG[lang]['search_result'].format(
+                    phone_number,
+                    target_id,
+                    target_name,
+                    country,
+                    country_code,
+                    format_number(new_balance),
+                    format_ist(get_ist())
+                )
                 
                 # Send result
                 result_msg = await update.message.reply_text(msg)
@@ -1246,7 +1265,7 @@ async def handle_gift_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ==================== REFERRAL SYSTEM ====================
 async def view_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """View referral info"""
+    """View referral info - FIXED: No markdown"""
     query = update.callback_query
     await query.answer()
     
@@ -1278,12 +1297,11 @@ async def view_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
         LANG[lang]['referral'].format(
             ref_code,
             bot_username,
-            f"ref_{ref_code}",
+            ref_code,
             bonus,
             total_ref,
             format_number(total_commission)
         ),
-        parse_mode=ParseMode.MARKDOWN,
         reply_markup=reply_markup
     )
 
@@ -1305,8 +1323,7 @@ async def share_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await query.edit_message_text(
-        f"🔗 Your Referral Link:\n`{ref_link}`\n\nClick Share to send to friends!",
-        parse_mode=ParseMode.MARKDOWN,
+        f"🔗 Your Referral Link:\n{ref_link}\n\nClick Share to send to friends!",
         reply_markup=reply_markup
     )
 
@@ -1355,7 +1372,7 @@ async def daily_bonus(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ==================== HISTORY ====================
 async def view_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """View search history"""
+    """View search history - FIXED: Shows phone numbers"""
     query = update.callback_query
     await query.answer()
     
@@ -1373,8 +1390,9 @@ async def view_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
         history_text = ""
         for i, s in enumerate(searches, 1):
             time = format_ist(s['timestamp']).split()[1]
+            phone = s.get('phone_number', 'N/A')
             target_name = s.get('target_name', 'Unknown')
-            history_text += f"{i}. 🆔 {s['target_id']} ({target_name}) - 🕐 {time}\n"
+            history_text += f"{i}. 📱 {phone}\n   🆔 {s['target_id']} ({target_name}) - 🕐 {time}\n"
     
     keyboard = [
         [InlineKeyboardButton("📊 Transactions", callback_data="view_transactions")],
@@ -1527,7 +1545,7 @@ async def handle_contact_message(update: Update, context: ContextTypes.DEFAULT_T
         f"💬 Message:\n{message}"
     )
     
-    keyboard = [[InlineKeyboardButton("💬 Reply", callback_data=f"reply_user_{user_id}")]]
+    keyboard = [[InlineKeyboardButton("💬 Reply", callback_data=f"admin_reply_{user_id}")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await context.bot.send_message(OWNER_ID, admin_msg, reply_markup=reply_markup)
@@ -1538,6 +1556,44 @@ async def handle_contact_message(update: Update, context: ContextTypes.DEFAULT_T
             InlineKeyboardButton("🏠 Main Menu", callback_data="back_to_menu")
         ]])
     )
+    
+    return ConversationHandler.END
+
+async def admin_reply_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Start admin reply"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.from_user.id != OWNER_ID:
+        return
+    
+    user_id = int(query.data.split('_')[2])
+    context.user_data['reply_to'] = user_id
+    
+    await query.edit_message_text(
+        f"✏️ Enter your reply to user {user_id}:",
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("❌ Cancel", callback_data="admin_panel")
+        ]])
+    )
+    return ADMIN_REPLY
+
+async def handle_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle admin reply"""
+    if update.effective_user.id != OWNER_ID:
+        return ConversationHandler.END
+    
+    user_id = context.user_data.get('reply_to')
+    message = update.message.text
+    
+    try:
+        await context.bot.send_message(
+            user_id,
+            f"📨 Reply from Admin:\n\n{message}"
+        )
+        await update.message.reply_text("✅ Reply sent successfully!")
+    except:
+        await update.message.reply_text("❌ Failed to send reply!")
     
     return ConversationHandler.END
 
@@ -1560,12 +1616,12 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     total_transactions = transactions_col.count_documents({})
     total_searches = search_history_col.count_documents({})
     total_orders = orders_col.count_documents({'status': 'completed'})
-    total_revenue = orders_col.aggregate([
-        {'$match': {'status': 'completed'}},
-        {'$group': {'_id': None, 'total': {'$sum': '$amount'}}}
-    ])
-    revenue = list(total_revenue)
-    total_revenue = revenue[0]['total'] if revenue else 0
+    
+    # Calculate revenue
+    total_revenue = 0
+    revenue_cursor = orders_col.find({'status': 'completed'})
+    for order in revenue_cursor:
+        total_revenue += order.get('amount', 0)
     
     settings = settings_col.find_one({'key': 'bot_settings'})
     maintenance = "🔴 ON" if settings and settings.get('maintenance_mode') else "🟢 OFF"
@@ -1665,6 +1721,24 @@ async def admin_view_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     await query.edit_message_text(msg, reply_markup=reply_markup)
 
+async def admin_users_nav(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Navigate users"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.from_user.id != OWNER_ID:
+        return
+    
+    direction = query.data.split('_')[2]  # prev or next
+    page = context.user_data.get('user_page', 0)
+    
+    if direction == 'prev':
+        context.user_data['user_page'] = max(0, page - 1)
+    else:
+        context.user_data['user_page'] = page + 1
+    
+    await admin_view_users(update, context)
+
 async def admin_search_user_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Start search user"""
     query = update.callback_query
@@ -1699,7 +1773,7 @@ async def admin_search_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     join_date = format_ist(user.get('joined_date', get_ist()))
     last_active = format_ist(user.get('last_active', get_ist()))
-    banned = "✅ Yes" if blacklist_col.find_one({'user_id': target_id}) else "❌ No"
+    banned = "Yes" if blacklist_col.find_one({'user_id': target_id}) else "No"
     
     msg = (
         f"🔍 User Found!\n\n"
@@ -1781,8 +1855,7 @@ async def admin_add_points_start(update: Update, context: ContextTypes.DEFAULT_T
         return
     
     await query.edit_message_text(
-        "Enter user ID and points (format: user_id points)\nExample: `123456789 100`",
-        parse_mode=ParseMode.MARKDOWN,
+        "Enter user ID and points (format: user_id points)\nExample: 123456789 100",
         reply_markup=InlineKeyboardMarkup([[
             InlineKeyboardButton("🔙 Cancel", callback_data="admin_points")
         ]])
@@ -1839,8 +1912,7 @@ async def admin_remove_points_start(update: Update, context: ContextTypes.DEFAUL
         return
     
     await query.edit_message_text(
-        "Enter user ID and points to remove (format: user_id points)\nExample: `123456789 50`",
-        parse_mode=ParseMode.MARKDOWN,
+        "Enter user ID and points to remove (format: user_id points)\nExample: 123456789 50",
         reply_markup=InlineKeyboardMarkup([[
             InlineKeyboardButton("🔙 Cancel", callback_data="admin_points")
         ]])
@@ -1892,6 +1964,43 @@ async def handle_remove_points(update: Update, context: ContextTypes.DEFAULT_TYP
     
     return ConversationHandler.END
 
+async def admin_all_transactions(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """View all transactions"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.from_user.id != OWNER_ID:
+        return
+    
+    transactions = list(transactions_col.find().sort('timestamp', -1).limit(20))
+    
+    if not transactions:
+        await query.edit_message_text(
+            "📭 No transactions found!",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔙 Back", callback_data="admin_points")
+            ]])
+        )
+        return
+    
+    msg = "📊 Recent Transactions:\n\n"
+    for t in transactions:
+        emoji = "➕" if t['type'] == 'credit' else "➖"
+        time = format_ist(t['timestamp']).split()[1]
+        msg += f"{emoji} User: {t['user_id']}\n"
+        msg += f"   Amount: {t['amount']} pts\n"
+        msg += f"   Reason: {t['reason'][:30]}\n"
+        msg += f"   Time: {time}\n\n"
+    
+    keyboard = [[InlineKeyboardButton("🔙 Back", callback_data="admin_points")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    # Split message if too long
+    if len(msg) > 4000:
+        msg = msg[:4000] + "..."
+    
+    await query.edit_message_text(msg, reply_markup=reply_markup)
+
 # ==================== ADMIN: GIFT CODE MANAGEMENT ====================
 async def admin_gift_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Admin gift code management"""
@@ -1938,17 +2047,52 @@ async def admin_generate_gift_code(update: Update, context: ContextTypes.DEFAULT
     
     await query.edit_message_text(
         f"✅ Gift Code Generated!\n\n"
-        f"Code: `{code}`\n"
+        f"Code: {code}\n"
         f"Points: {points}\n"
         f"Package: {GIFT_PACKAGES[str(points)]['emoji']}\n"
         f"Created: {format_ist(get_ist())}\n\n"
         f"Share this code with users!",
-        parse_mode=ParseMode.MARKDOWN,
         reply_markup=InlineKeyboardMarkup([[
             InlineKeyboardButton("🎁 Generate More", callback_data="admin_gift"),
             InlineKeyboardButton("🔙 Admin Panel", callback_data="admin_panel")
         ]])
     )
+
+async def admin_view_codes(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """View all gift codes"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.from_user.id != OWNER_ID:
+        return
+    
+    codes = list(gift_codes_col.find().sort('created_date', -1).limit(20))
+    
+    if not codes:
+        await query.edit_message_text(
+            "📭 No gift codes found!",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔙 Back", callback_data="admin_gift")
+            ]])
+        )
+        return
+    
+    msg = "🎁 Gift Codes:\n\n"
+    for code in codes:
+        status = "✅ Used" if code.get('used') else "🆕 Available"
+        used_by = f" by {code.get('used_by')}" if code.get('used_by') else ""
+        time = format_ist(code['created_date']).split()[1]
+        msg += f"Code: {code['code']}\n"
+        msg += f"Points: {code['points']} | Status: {status}{used_by}\n"
+        msg += f"Created: {time}\n\n"
+    
+    keyboard = [[InlineKeyboardButton("🔙 Back", callback_data="admin_gift")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    if len(msg) > 4000:
+        msg = msg[:4000] + "..."
+    
+    await query.edit_message_text(msg, reply_markup=reply_markup)
 
 # ==================== ADMIN: BROADCAST SYSTEM ====================
 async def admin_broadcast_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -2005,7 +2149,7 @@ async def handle_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             await context.bot.send_message(
                 user['user_id'],
-                f"📢 **ANNOUNCEMENT**\n\n{message}"
+                f"📢 ANNOUNCEMENT\n\n{message}"
             )
             success += 1
             await asyncio.sleep(0.05)  # Rate limit
@@ -2088,6 +2232,45 @@ async def admin_pending_orders(update: Update, context: ContextTypes.DEFAULT_TYP
     
     keyboard = [[InlineKeyboardButton("🔙 Back", callback_data="admin_orders")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    if len(msg) > 4000:
+        msg = msg[:4000] + "..."
+    
+    await query.edit_message_text(msg, reply_markup=reply_markup)
+
+async def admin_completed_orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """View completed orders"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.from_user.id != OWNER_ID:
+        return
+    
+    orders = list(orders_col.find({'status': 'completed'}).sort('created_at', -1).limit(10))
+    
+    if not orders:
+        await query.edit_message_text(
+            "📭 No completed orders found!",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔙 Back", callback_data="admin_orders")
+            ]])
+        )
+        return
+    
+    msg = "✅ Completed Orders:\n\n"
+    for order in orders:
+        msg += f"✅ Order: {order['order_id']}\n"
+        msg += f"   User: {order['user_id']}\n"
+        msg += f"   Points: {order['points']}\n"
+        msg += f"   Amount: ₹{order['amount']}\n"
+        msg += f"   Method: {order.get('payment_method', 'N/A')}\n"
+        msg += f"   Time: {format_ist(order['created_at'])}\n\n"
+    
+    keyboard = [[InlineKeyboardButton("🔙 Back", callback_data="admin_orders")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    if len(msg) > 4000:
+        msg = msg[:4000] + "..."
     
     await query.edit_message_text(msg, reply_markup=reply_markup)
 
@@ -2482,8 +2665,7 @@ async def admin_warn_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
         lang = get_user_lang(target_id)
         await context.bot.send_message(
             target_id,
-            f"⚠️ **Warning!**\n\nYou have received a warning.\nTotal warnings: {new_warnings}\n\nPlease follow the rules to avoid being banned.",
-            parse_mode=ParseMode.MARKDOWN
+            f"⚠️ Warning!\n\nYou have received a warning.\nTotal warnings: {new_warnings}\n\nPlease follow the rules to avoid being banned."
         )
     except:
         pass
@@ -2606,7 +2788,7 @@ async def daily_bonus_reminder():
         try:
             await app.bot.send_message(
                 user['user_id'],
-                "🎁 **Daily Bonus Reminder**\n\nDon't forget to claim your daily bonus!\nUse /daily to get free points!"
+                "🎁 Daily Bonus Reminder\n\nDon't forget to claim your daily bonus!\nUse /daily to get free points!"
             )
             await asyncio.sleep(0.05)
         except:
@@ -2627,6 +2809,12 @@ def main():
     contact_conv = ConversationHandler(
         entry_points=[CallbackQueryHandler(contact_admin_start, pattern="^contact_admin$")],
         states={CONTACT_ADMIN: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_contact_message)]},
+        fallbacks=[]
+    )
+    
+    admin_reply_conv = ConversationHandler(
+        entry_points=[CallbackQueryHandler(admin_reply_start, pattern="^admin_reply_\\d+$")],
+        states={ADMIN_REPLY: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_admin_reply)]},
         fallbacks=[]
     )
     
@@ -2713,6 +2901,7 @@ def main():
     application.add_handler(CallbackQueryHandler(main_menu, pattern="^lang_.*$"))
     application.add_handler(CallbackQueryHandler(set_language, pattern="^set_lang_.*$"))
     application.add_handler(CallbackQueryHandler(main_menu, pattern="^back_to_menu$"))
+    application.add_handler(CallbackQueryHandler(lambda u,c: None, pattern="^noop$"))
     
     # User handlers
     application.add_handler(CallbackQueryHandler(view_profile, pattern="^view_profile$"))
@@ -2746,27 +2935,49 @@ def main():
     
     # Admin panel handlers
     application.add_handler(CallbackQueryHandler(admin_panel, pattern="^admin_panel$"))
+    
+    # Admin user management
     application.add_handler(CallbackQueryHandler(admin_users_menu, pattern="^admin_users$"))
     application.add_handler(CallbackQueryHandler(admin_view_users, pattern="^admin_view_users$"))
-    application.add_handler(CallbackQueryHandler(admin_view_users, pattern="^admin_users_(prev|next)$"))
+    application.add_handler(CallbackQueryHandler(admin_users_nav, pattern="^admin_users_(prev|next)$"))
     application.add_handler(CallbackQueryHandler(admin_top_users, pattern="^admin_top_users$"))
+    
+    # Admin point management
     application.add_handler(CallbackQueryHandler(admin_points_menu, pattern="^admin_points$"))
+    application.add_handler(CallbackQueryHandler(admin_all_transactions, pattern="^admin_all_trans$"))
+    
+    # Admin gift management
     application.add_handler(CallbackQueryHandler(admin_gift_menu, pattern="^admin_gift$"))
     application.add_handler(CallbackQueryHandler(admin_generate_gift_code, pattern="^admin_gen_gift_\\d+$"))
+    application.add_handler(CallbackQueryHandler(admin_view_codes, pattern="^admin_view_codes$"))
+    
+    # Admin broadcast
     application.add_handler(CallbackQueryHandler(admin_broadcast_start, pattern="^admin_broadcast$"))
+    
+    # Admin orders
     application.add_handler(CallbackQueryHandler(admin_orders_menu, pattern="^admin_orders$"))
     application.add_handler(CallbackQueryHandler(admin_pending_orders, pattern="^admin_pending_orders$"))
+    application.add_handler(CallbackQueryHandler(admin_completed_orders, pattern="^admin_completed_orders$"))
+    
+    # Admin settings
     application.add_handler(CallbackQueryHandler(admin_settings_menu, pattern="^admin_settings$"))
     application.add_handler(CallbackQueryHandler(toggle_maintenance, pattern="^admin_toggle_maintenance$"))
     application.add_handler(CallbackQueryHandler(toggle_reactions, pattern="^admin_toggle_reactions$"))
+    
+    # Admin blacklist
     application.add_handler(CallbackQueryHandler(admin_blacklist_menu, pattern="^admin_blacklist$"))
+    
+    # Admin export/backup
     application.add_handler(CallbackQueryHandler(admin_export_data, pattern="^admin_export$"))
     application.add_handler(CallbackQueryHandler(admin_backup_db, pattern="^admin_backup$"))
+    
+    # Payment approval
     application.add_handler(CallbackQueryHandler(admin_approve_payment, pattern="^admin_approve_.*$"))
     application.add_handler(CallbackQueryHandler(admin_reject_payment, pattern="^admin_reject_.*$"))
     
     # Add conversation handlers
     application.add_handler(contact_conv)
+    application.add_handler(admin_reply_conv)
     application.add_handler(search_conv)
     application.add_handler(redeem_conv)
     application.add_handler(add_points_conv)
@@ -2800,18 +3011,19 @@ def main():
     print("   ✓ Point System")
     print("   ✓ Purchase System")
     print("   ✓ Gift Code System")
-    print("   ✓ Telegram ID Search (Fixed!)")
+    print("   ✓ Telegram ID Search (Shows Phone Number!)")
     print("   ✓ Referral System")
     print("   ✓ Daily Bonus")
-    print("   ✓ Admin Panel (40+ features)")
+    print("   ✓ Admin Panel (45+ features)")
     print("   ✓ Broadcast System")
     print("   ✓ Blacklist System")
     print("   ✓ Ban/Unban/Warn System")
     print("   ✓ Export/Backup")
     print("   ✓ Auto Reactions")
     print("   ✓ Bilingual Support")
-    print("   ✓ Payment Verification (Fixed!)")
-    print("   ✓ All Admin Buttons Working (Fixed!)")
+    print("   ✓ Payment Verification")
+    print("   ✓ All Admin Buttons Working")
+    print("   ✓ Settings Working Separately")
     print("="*50)
     
     application.run_polling(allowed_updates=Update.ALL_TYPES)
