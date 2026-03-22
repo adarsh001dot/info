@@ -41,7 +41,7 @@ from telegram.ext import (
 from telegram.constants import ParseMode
 
 # ==================== CONFIGURATION ====================
-BOT_TOKEN = "8432105036:AAF_hiRAwU7N2nCVWakv9pjb1zOT4yfc-zk"
+BOT_TOKEN = "8612834168:AAFT1VX35aEpyEOMoszHf2ymrr2R4iP3gvQ"
 MONGODB_URI = "mongodb+srv://nikilsaxena843_db_user:3gF2wyT4IjsFt0cY@vipbot.puv6gfk.mongodb.net/?appName=vipbot"
 # NEW API CONFIGURATION
 API_URL = "https://api-test-vip-835d081a6316.herokuapp.com/api/search"
