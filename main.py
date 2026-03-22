@@ -3,7 +3,7 @@
 🤖 COMPLETE TELEGRAM BOT - ALL FEATURES WORKING
 ===========================================
 Developer: @VIP_X_OFFICIAL
-Version: 8.0 (FINAL)
+Version: 8.1 (FINAL - Updated API)
 Features: 100+ Features Working
 Database: MongoDB (IST Timezone)
 Bot Token: 8432105036:AAF_hiRAwU7N2nCVWakv9pjb1zOT4yfc-zk
@@ -41,12 +41,13 @@ from telegram.ext import (
 from telegram.constants import ParseMode
 
 # ==================== CONFIGURATION ====================
-BOT_TOKEN = "8612834168:AAFT1VX35aEpyEOMoszHf2ymrr2R4iP3gvQ"
+BOT_TOKEN = "8432105036:AAF_hiRAwU7N2nCVWakv9pjb1zOT4yfc-zk"
 MONGODB_URI = "mongodb+srv://nikilsaxena843_db_user:3gF2wyT4IjsFt0cY@vipbot.puv6gfk.mongodb.net/?appName=vipbot"
-API_URL = "http://api.subhxcosmo.in/api"
-API_KEY = "suryanshHacker"
+# NEW API CONFIGURATION
+API_URL = "https://api-test-vip-835d081a6316.herokuapp.com/api/search"
+API_KEY = "98577049"  # New API key
 OWNER_ID = 7459756974
-OWNER_USERNAME = "@VIP_X_OFFICIAL"  # Updated admin username
+OWNER_USERNAME = "@VIP_X_OFFICIAL"
 
 # India Timezone
 IST = timezone('Asia/Kolkata')
@@ -147,9 +148,9 @@ try:
             'api_key': API_KEY,
             'point_rate': 5,
             'min_withdraw': 100,
-            'referral_bonus': 2,  # Changed from 10 to 2
-            'daily_bonus': 1,      # Changed from 5 to 1
-            'welcome_bonus': 2,    # Changed from 10 to 2
+            'referral_bonus': 2,
+            'daily_bonus': 1,
+            'welcome_bonus': 2,
             'created_at': datetime.now(IST)
         })
     else:
@@ -159,7 +160,9 @@ try:
             {'$set': {
                 'referral_bonus': 2,
                 'daily_bonus': 1,
-                'welcome_bonus': 2
+                'welcome_bonus': 2,
+                'api_url': API_URL,
+                'api_key': API_KEY
             }}
         )
     
@@ -183,6 +186,8 @@ try:
     print(f"   🤝 Referral Bonus: 2 points")
     print(f"   🎁 Daily Bonus: 1 point")
     print(f"   👑 Admin Username: {OWNER_USERNAME}")
+    print(f"   🌐 NEW API ENDPOINT: {API_URL}")
+    print(f"   🔑 API KEY: {API_KEY}")
     print("="*50)
     
 except Exception as e:
@@ -223,7 +228,7 @@ LANG = {
         'profile': "👤 प्रोफाइल\n\n🆔 आईडी: {}\n👤 नाम: {}\n📅 ज्वाइन: {}\n💰 पॉइंट्स: {}\n🔍 कुल सर्च: {}\n🎁 रिडीम: {}\n🤝 रेफरल: {}",
         'settings': "⚙️ सेटिंग्स\n\nभाषा, नोटिफिकेशन और प्राइवेसी सेटिंग्स",
         
-        # Referral - Updated with admin username
+        # Referral
         'referral': "🤝 रेफरल सिस्टम\n\nआपका रेफरल कोड: {}\nरेफरल लिंक: https://t.me/{}?start=ref_{}\n\nकमीशन: {} पॉइंट्स प्रति रेफरल\nकुल रेफरल: {}\nकुल कमीशन: {} पॉइंट्स\n\nएडमिन: {}",
         
         # Daily Bonus
@@ -233,7 +238,7 @@ LANG = {
         # Admin
         'admin_panel': "👑 एडमिन पैनल\n\n🕐 {} IST\nएडमिन: {}",
         
-        # Contact - Updated with admin username
+        # Contact
         'contact_admin': "📝 अपना संदेश लिखें (एडमिन {} जल्दी जवाब देगा):",
         'msg_sent': "✅ संदेश भेज दिया गया!",
         
@@ -241,7 +246,7 @@ LANG = {
         'search_history': "📋 हाल की सर्च (पिछले 10):\n\n{}",
         'transaction_history': "📊 हाल के ट्रांजैक्शन:\n\n{}",
         
-        # Help - Updated with admin username
+        # Help
         'help_text': "❓ मदद\n\n/start - शुरू करें\n/profile - प्रोफाइल\n/points - पॉइंट्स\n/buy - खरीदें\n/redeem - कोड रिडीम\n/referral - रेफरल\n/history - हिस्ट्री\n/settings - सेटिंग्स\n/help - मदद\n\nएडमिन: {}",
     },
     'en': {
@@ -276,17 +281,17 @@ LANG = {
         'profile': "👤 Profile\n\n🆔 ID: {}\n👤 Name: {}\n📅 Joined: {}\n💰 Points: {}\n🔍 Total Searches: {}\n🎁 Redeemed: {}\n🤝 Referrals: {}",
         'settings': "⚙️ Settings\n\nLanguage, Notifications & Privacy settings",
         
-        # Referral - Updated with admin username
+        # Referral
         'referral': "🤝 Referral System\n\nYour Referral Code: {}\nReferral Link: https://t.me/{}?start=ref_{}\n\nCommission: {} points per referral\nTotal Referrals: {}\nTotal Commission: {} points\n\nAdmin: {}",
         
         # Daily Bonus
         'daily_bonus': "🎁 Daily Bonus\n\nYou got {} points!\nNext bonus tomorrow at {}",
         'already_claimed': "❌ Already claimed today!\nNext bonus tomorrow at {}",
         
-        # Admin - Updated with admin username
+        # Admin
         'admin_panel': "👑 Admin Panel\n\n🕐 {} IST\nAdmin: {}",
         
-        # Contact - Updated with admin username
+        # Contact
         'contact_admin': "📝 Write your message (Admin {} will reply soon):",
         'msg_sent': "✅ Message sent to admin!",
         
@@ -294,7 +299,7 @@ LANG = {
         'search_history': "📋 Recent Searches (Last 10):\n\n{}",
         'transaction_history': "📊 Recent Transactions:\n\n{}",
         
-        # Help - Updated with admin username
+        # Help
         'help_text': "❓ Help\n\n/start - Start bot\n/profile - View profile\n/points - Check points\n/buy - Buy points\n/redeem - Redeem code\n/referral - Referral system\n/history - Search history\n/settings - Settings\n/help - This help\n\nAdmin: {}",
     }
 }
@@ -306,7 +311,7 @@ async def set_language(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     
     user_id = query.from_user.id
-    lang = query.data.split('_')[2]  # set_lang_hi or set_lang_en
+    lang = query.data.split('_')[2]
     
     # Update database
     users_col.update_one(
@@ -471,7 +476,7 @@ async def get_or_create_user(user_id, username=None, first_name=None):
                 {'$set': {'referral_code': ref_code}}
             )
         
-        # Welcome bonus - UPDATED to 2 points
+        # Welcome bonus
         settings = settings_col.find_one({'key': 'bot_settings'})
         welcome_bonus = settings.get('welcome_bonus', 2) if settings else 2
         await add_points(user_id, welcome_bonus, "Welcome bonus")
@@ -571,11 +576,13 @@ async def add_reaction(message):
         pass
 
 def clean_api_response(data):
-    """Remove owner info from API response"""
+    """Remove owner info from API response (for new API format)"""
     if isinstance(data, dict):
+        # Remove owner field if present
         data.pop('owner', None)
-        if 'result' in data and isinstance(data['result'], dict):
-            data['result'].pop('owner', None)
+        # Also remove if nested in data
+        if 'data' in data and isinstance(data['data'], dict):
+            data['data'].pop('owner', None)
     return data
 
 # ==================== COMMAND HANDLERS ====================
@@ -604,7 +611,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         update.effective_user.first_name
     )
     
-    # Handle referral - UPDATED to 2 points
+    # Handle referral
     if context.user_data.get('referred_by') and not user.get('referred_by'):
         referrer_id = context.user_data['referred_by']
         settings = settings_col.find_one({'key': 'bot_settings'})
@@ -1094,7 +1101,7 @@ async def use_service(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return SEARCH_ID
 
 async def handle_search_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle Telegram ID input for search"""
+    """Handle Telegram ID input for search using new API"""
     user_id = update.effective_user.id
     lang = get_user_lang(user_id)
     target_id = update.message.text.strip()
@@ -1116,10 +1123,13 @@ async def handle_search_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     processing = await update.message.reply_text(LANG[lang]['processing'])
     
     try:
-        # Call API with Telegram ID
+        # NEW API CALL with key and userid parameters
+        api_url = API_URL
+        api_key = API_KEY
+        
         response = requests.get(
-            API_URL,
-            params={'key': API_KEY, 'type': 'sms', 'term': target_id},
+            api_url,
+            params={'key': api_key, 'userid': target_id},
             timeout=30
         )
         
@@ -1135,16 +1145,23 @@ async def handle_search_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 target_user = users_col.find_one({'user_id': target_id})
                 target_name = target_user.get('first_name', 'Unknown') if target_user else 'Not Registered'
                 
-                # Get phone number from API response
+                # Extract data from new API response format
+                # New API response format:
+                # {"code":200,"data":{"country":"India","country_code":"+91","found":true,"number":"8423663857"},"status":"success",...}
                 phone_number = "Not Available"
                 country = "India"
                 country_code = "+91"
                 
-                if data.get('success') and data.get('result'):
-                    result = data['result']
-                    phone_number = result.get('number', 'Not Available')
-                    country = result.get('country', 'India')
-                    country_code = result.get('country_code', '+91')
+                if data.get('status') == 'success' and data.get('data'):
+                    result_data = data['data']
+                    phone_number = result_data.get('number', 'Not Available')
+                    country = result_data.get('country', 'India')
+                    country_code = result_data.get('country_code', '+91')
+                elif data.get('code') == 200 and data.get('data'):
+                    result_data = data['data']
+                    phone_number = result_data.get('number', 'Not Available')
+                    country = result_data.get('country', 'India')
+                    country_code = result_data.get('country_code', '+91')
                 
                 # Save to history
                 search_history_col.insert_one({
@@ -1162,7 +1179,7 @@ async def handle_search_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     {'$inc': {'total_searches': 1}}
                 )
                 
-                # Format result
+                # Format result (same format as before)
                 msg = LANG[lang]['search_result'].format(
                     phone_number,
                     target_id,
@@ -1349,7 +1366,7 @@ async def share_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ==================== DAILY BONUS ====================
 async def daily_bonus(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Claim daily bonus - UPDATED to 1 point"""
+    """Claim daily bonus"""
     user_id = update.effective_user.id
     user = users_col.find_one({'user_id': user_id})
     lang = get_user_lang(user_id)
@@ -1372,7 +1389,7 @@ async def daily_bonus(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
     
-    # Give bonus - 1 point
+    # Give bonus
     settings = settings_col.find_one({'key': 'bot_settings'})
     bonus = settings.get('daily_bonus', 1) if settings else 1
     
@@ -1669,6 +1686,9 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 🤝 Referral Bonus: 2 Points
 🎁 Daily Bonus: 1 Point
 
+🌐 API Endpoint: {API_URL}
+🔑 API Key: {API_KEY}
+
 🔧 OPTIONS:
     """
     
@@ -1757,7 +1777,7 @@ async def admin_users_nav(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query.from_user.id != OWNER_ID:
         return
     
-    direction = query.data.split('_')[2]  # prev or next
+    direction = query.data.split('_')[2]
     page = context.user_data.get('user_page', 0)
     
     if direction == 'prev':
@@ -2181,7 +2201,7 @@ async def handle_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"📢 ANNOUNCEMENT from {OWNER_USERNAME}\n\n{message}"
             )
             success += 1
-            await asyncio.sleep(0.05)  # Rate limit
+            await asyncio.sleep(0.05)
         except:
             failed += 1
     
@@ -2333,6 +2353,10 @@ async def admin_settings_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
 🤝 Referral Bonus: {referral_bonus} pts
 🎁 Daily Bonus: {daily_bonus} pts
 🎁 Welcome Bonus: {welcome_bonus} pts
+
+🌐 API Settings:
+📡 API Endpoint: {API_URL}
+🔑 API Key: {API_KEY}
 
 📝 Options:
     """
@@ -3039,6 +3063,8 @@ def main():
     print(f"🎁 Gift Packages: {len(GIFT_PACKAGES)}")
     print(f"👥 Total Users: {users_col.count_documents({})}")
     print(f"💎 1 Search = 1 Point (by Telegram ID)")
+    print(f"🌐 API Endpoint: {API_URL}")
+    print(f"🔑 API Key: {API_KEY}")
     print("="*50)
     print("✅ BONUS SETTINGS:")
     print(f"   🎁 Welcome Bonus: 2 points")
@@ -3051,6 +3077,7 @@ def main():
     print("   ✓ Purchase System")
     print("   ✓ Gift Code System")
     print("   ✓ Telegram ID Search (Shows Phone Number!)")
+    print("   ✓ NEW API Integrated Successfully")
     print("   ✓ Referral System")
     print("   ✓ Daily Bonus")
     print("   ✓ Admin Panel (45+ features)")
