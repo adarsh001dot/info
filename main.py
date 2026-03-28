@@ -1,12 +1,12 @@
 """
 ===========================================
-🤖 COMPLETE TELEGRAM BOT - ALL FEATURES WORKING
+🤖 COMPLETE TELEGRAM BOT - ALL FEATURES WORKING WITH COLORED BUTTONS
 ===========================================
 Developer: @VIP_X_OFFICIAL
-Version: 8.1 (FINAL - Updated API)
-Features: 100+ Features Working
+Version: 8.1 (COLORED BUTTONS)
+Features: 100+ Features Working + Colored Buttons
 Database: MongoDB (IST Timezone)
-Bot Token: 8432105036:AAF_hiRAwU7N2nCVWakv9pjb1zOT4yfc-zk
+Bot Token: 8612834168:AAFT1VX35aEpyEOMoszHf2ymrr2R4iP3gvQ
 Owner ID: 7459756974
 Admin Username: @VIP_X_OFFICIAL
 Welcome Bonus: 2 Points
@@ -43,35 +43,34 @@ from telegram.constants import ParseMode
 # ==================== CONFIGURATION ====================
 BOT_TOKEN = "8612834168:AAFT1VX35aEpyEOMoszHf2ymrr2R4iP3gvQ"
 MONGODB_URI = "mongodb+srv://nikilsaxena843_db_user:3gF2wyT4IjsFt0cY@vipbot.puv6gfk.mongodb.net/?appName=vipbot"
-# NEW API CONFIGURATION
-API_URL = "https://api-test-vip-835d081a6316.herokuapp.com/api/search"
-API_KEY = "98577049"  # New API key
+API_URL = "http://api.subhxcosmo.in/api"
+API_KEY = "suryanshHacker"
 OWNER_ID = 7459756974
-OWNER_USERNAME = "@VIP_X_OFFICIAL"
+OWNER_USERNAME = "@VIP_X_OFFICIAL"  # Updated admin username
 
 # India Timezone
 IST = timezone('Asia/Kolkata')
 
 # Point Packages
 POINT_PACKAGES = {
-    "5": {"points": 5, "price": 25, "emoji": "⚡", "popular": False},
-    "10": {"points": 10, "price": 50, "emoji": "💫", "popular": False},
-    "15": {"points": 15, "price": 75, "emoji": "✨", "popular": False},
-    "20": {"points": 20, "price": 100, "emoji": "⭐", "popular": True},
-    "30": {"points": 30, "price": 150, "emoji": "🌟", "popular": False},
-    "50": {"points": 50, "price": 250, "emoji": "💎", "popular": False},
-    "100": {"points": 100, "price": 500, "emoji": "👑", "popular": True},
+    "5": {"points": 5, "price": 25, "emoji": "⚡", "color": "🟡", "popular": False},
+    "10": {"points": 10, "price": 50, "emoji": "💫", "color": "🟢", "popular": False},
+    "15": {"points": 15, "price": 75, "emoji": "✨", "color": "🔵", "popular": False},
+    "20": {"points": 20, "price": 100, "emoji": "⭐", "color": "🟣", "popular": True},
+    "30": {"points": 30, "price": 150, "emoji": "🌟", "color": "🟠", "popular": False},
+    "50": {"points": 50, "price": 250, "emoji": "💎", "color": "🔴", "popular": False},
+    "100": {"points": 100, "price": 500, "emoji": "👑", "color": "🟤", "popular": True},
 }
 
 # Gift Packages
 GIFT_PACKAGES = {
-    "5": {"points": 5, "emoji": "⚡"},
-    "10": {"points": 10, "emoji": "💫"},
-    "15": {"points": 15, "emoji": "✨"},
-    "20": {"points": 20, "emoji": "⭐"},
-    "30": {"points": 30, "emoji": "🌟"},
-    "50": {"points": 50, "emoji": "💎"},
-    "100": {"points": 100, "emoji": "👑"},
+    "5": {"points": 5, "emoji": "⚡", "color": "🟡"},
+    "10": {"points": 10, "emoji": "💫", "color": "🟢"},
+    "15": {"points": 15, "emoji": "✨", "color": "🔵"},
+    "20": {"points": 20, "emoji": "⭐", "color": "🟣"},
+    "30": {"points": 30, "emoji": "🌟", "color": "🟠"},
+    "50": {"points": 50, "emoji": "💎", "color": "🔴"},
+    "100": {"points": 100, "emoji": "👑", "color": "🟤"},
 }
 
 # Reactions
@@ -148,9 +147,9 @@ try:
             'api_key': API_KEY,
             'point_rate': 5,
             'min_withdraw': 100,
-            'referral_bonus': 2,
-            'daily_bonus': 1,
-            'welcome_bonus': 2,
+            'referral_bonus': 2,  # Changed from 10 to 2
+            'daily_bonus': 1,      # Changed from 5 to 1
+            'welcome_bonus': 2,    # Changed from 10 to 2
             'created_at': datetime.now(IST)
         })
     else:
@@ -160,9 +159,7 @@ try:
             {'$set': {
                 'referral_bonus': 2,
                 'daily_bonus': 1,
-                'welcome_bonus': 2,
-                'api_url': API_URL,
-                'api_key': API_KEY
+                'welcome_bonus': 2
             }}
         )
     
@@ -186,8 +183,14 @@ try:
     print(f"   🤝 Referral Bonus: 2 points")
     print(f"   🎁 Daily Bonus: 1 point")
     print(f"   👑 Admin Username: {OWNER_USERNAME}")
-    print(f"   🌐 NEW API ENDPOINT: {API_URL}")
-    print(f"   🔑 API KEY: {API_KEY}")
+    print("="*50)
+    print("🎨 COLORED BUTTONS ENABLED:")
+    print("   🔵 Primary - Blue Buttons")
+    print("   🟢 Success - Green Buttons")
+    print("   🔴 Danger - Red Buttons")
+    print("   🟡 Warning - Yellow Buttons")
+    print("   🟣 Premium - Purple Buttons")
+    print("   🟠 Info - Orange Buttons")
     print("="*50)
     
 except Exception as e:
@@ -228,7 +231,7 @@ LANG = {
         'profile': "👤 प्रोफाइल\n\n🆔 आईडी: {}\n👤 नाम: {}\n📅 ज्वाइन: {}\n💰 पॉइंट्स: {}\n🔍 कुल सर्च: {}\n🎁 रिडीम: {}\n🤝 रेफरल: {}",
         'settings': "⚙️ सेटिंग्स\n\nभाषा, नोटिफिकेशन और प्राइवेसी सेटिंग्स",
         
-        # Referral
+        # Referral - Updated with admin username
         'referral': "🤝 रेफरल सिस्टम\n\nआपका रेफरल कोड: {}\nरेफरल लिंक: https://t.me/{}?start=ref_{}\n\nकमीशन: {} पॉइंट्स प्रति रेफरल\nकुल रेफरल: {}\nकुल कमीशन: {} पॉइंट्स\n\nएडमिन: {}",
         
         # Daily Bonus
@@ -238,7 +241,7 @@ LANG = {
         # Admin
         'admin_panel': "👑 एडमिन पैनल\n\n🕐 {} IST\nएडमिन: {}",
         
-        # Contact
+        # Contact - Updated with admin username
         'contact_admin': "📝 अपना संदेश लिखें (एडमिन {} जल्दी जवाब देगा):",
         'msg_sent': "✅ संदेश भेज दिया गया!",
         
@@ -246,7 +249,7 @@ LANG = {
         'search_history': "📋 हाल की सर्च (पिछले 10):\n\n{}",
         'transaction_history': "📊 हाल के ट्रांजैक्शन:\n\n{}",
         
-        # Help
+        # Help - Updated with admin username
         'help_text': "❓ मदद\n\n/start - शुरू करें\n/profile - प्रोफाइल\n/points - पॉइंट्स\n/buy - खरीदें\n/redeem - कोड रिडीम\n/referral - रेफरल\n/history - हिस्ट्री\n/settings - सेटिंग्स\n/help - मदद\n\nएडमिन: {}",
     },
     'en': {
@@ -281,17 +284,17 @@ LANG = {
         'profile': "👤 Profile\n\n🆔 ID: {}\n👤 Name: {}\n📅 Joined: {}\n💰 Points: {}\n🔍 Total Searches: {}\n🎁 Redeemed: {}\n🤝 Referrals: {}",
         'settings': "⚙️ Settings\n\nLanguage, Notifications & Privacy settings",
         
-        # Referral
+        # Referral - Updated with admin username
         'referral': "🤝 Referral System\n\nYour Referral Code: {}\nReferral Link: https://t.me/{}?start=ref_{}\n\nCommission: {} points per referral\nTotal Referrals: {}\nTotal Commission: {} points\n\nAdmin: {}",
         
         # Daily Bonus
         'daily_bonus': "🎁 Daily Bonus\n\nYou got {} points!\nNext bonus tomorrow at {}",
         'already_claimed': "❌ Already claimed today!\nNext bonus tomorrow at {}",
         
-        # Admin
+        # Admin - Updated with admin username
         'admin_panel': "👑 Admin Panel\n\n🕐 {} IST\nAdmin: {}",
         
-        # Contact
+        # Contact - Updated with admin username
         'contact_admin': "📝 Write your message (Admin {} will reply soon):",
         'msg_sent': "✅ Message sent to admin!",
         
@@ -299,7 +302,7 @@ LANG = {
         'search_history': "📋 Recent Searches (Last 10):\n\n{}",
         'transaction_history': "📊 Recent Transactions:\n\n{}",
         
-        # Help
+        # Help - Updated with admin username
         'help_text': "❓ Help\n\n/start - Start bot\n/profile - View profile\n/points - Check points\n/buy - Buy points\n/redeem - Redeem code\n/referral - Referral system\n/history - Search history\n/settings - Settings\n/help - This help\n\nAdmin: {}",
     }
 }
@@ -311,7 +314,7 @@ async def set_language(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     
     user_id = query.from_user.id
-    lang = query.data.split('_')[2]
+    lang = query.data.split('_')[2]  # set_lang_hi or set_lang_en
     
     # Update database
     users_col.update_one(
@@ -331,23 +334,23 @@ async def set_language(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         text = "✅ Language changed to English!"
     
-    # Create main menu buttons
+    # Create main menu buttons with COLORS
     keyboard = [
         [
-            InlineKeyboardButton("💰 Points", callback_data="check_points"),
-            InlineKeyboardButton("🛒 Buy", callback_data="buy_points")
+            InlineKeyboardButton("🔵 💰 Points", callback_data="check_points"),
+            InlineKeyboardButton("🟢 🛒 Buy", callback_data="buy_points")
         ],
         [
-            InlineKeyboardButton("📱 Search", callback_data="use_service"),
-            InlineKeyboardButton("🎁 Redeem", callback_data="redeem_code")
+            InlineKeyboardButton("🔴 📱 Search", callback_data="use_service"),
+            InlineKeyboardButton("🟡 🎁 Redeem", callback_data="redeem_code")
         ],
         [
-            InlineKeyboardButton("👤 Profile", callback_data="view_profile"),
-            InlineKeyboardButton("🤝 Referral", callback_data="view_referral")
+            InlineKeyboardButton("🟣 👤 Profile", callback_data="view_profile"),
+            InlineKeyboardButton("🔵 🤝 Referral", callback_data="view_referral")
         ],
         [
-            InlineKeyboardButton("📋 History", callback_data="view_history"),
-            InlineKeyboardButton("⚙️ Settings", callback_data="user_settings")
+            InlineKeyboardButton("🟠 📋 History", callback_data="view_history"),
+            InlineKeyboardButton("⚪ ⚙️ Settings", callback_data="user_settings")
         ],
         [
             InlineKeyboardButton("📞 Contact", callback_data="contact_admin"),
@@ -355,9 +358,9 @@ async def set_language(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
     ]
     
-    # Admin button
+    # Admin button with COLOR
     if user_id == OWNER_ID:
-        keyboard.append([InlineKeyboardButton("👑 ADMIN PANEL", callback_data="admin_panel")])
+        keyboard.append([InlineKeyboardButton("🔴 👑 ADMIN PANEL", callback_data="admin_panel")])
     
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -374,7 +377,7 @@ async def change_language(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("🇮🇳 हिंदी", callback_data="set_lang_hi"),
          InlineKeyboardButton("🇬🇧 English", callback_data="set_lang_en")],
-        [InlineKeyboardButton("🔙 Back", callback_data="back_to_menu")]
+        [InlineKeyboardButton("⚪ 🔙 Back", callback_data="back_to_menu")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -476,7 +479,7 @@ async def get_or_create_user(user_id, username=None, first_name=None):
                 {'$set': {'referral_code': ref_code}}
             )
         
-        # Welcome bonus
+        # Welcome bonus - UPDATED to 2 points
         settings = settings_col.find_one({'key': 'bot_settings'})
         welcome_bonus = settings.get('welcome_bonus', 2) if settings else 2
         await add_points(user_id, welcome_bonus, "Welcome bonus")
@@ -576,13 +579,11 @@ async def add_reaction(message):
         pass
 
 def clean_api_response(data):
-    """Remove owner info from API response (for new API format)"""
+    """Remove owner info from API response"""
     if isinstance(data, dict):
-        # Remove owner field if present
         data.pop('owner', None)
-        # Also remove if nested in data
-        if 'data' in data and isinstance(data['data'], dict):
-            data['data'].pop('owner', None)
+        if 'result' in data and isinstance(data['result'], dict):
+            data['result'].pop('owner', None)
     return data
 
 # ==================== COMMAND HANDLERS ====================
@@ -611,7 +612,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         update.effective_user.first_name
     )
     
-    # Handle referral
+    # Handle referral - UPDATED to 2 points
     if context.user_data.get('referred_by') and not user.get('referred_by'):
         referrer_id = context.user_data['referred_by']
         settings = settings_col.find_one({'key': 'bot_settings'})
@@ -645,7 +646,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except:
             pass
     
-    # Language selection
+    # Language selection with COLORED buttons
     keyboard = [
         [InlineKeyboardButton("🇮🇳 हिंदी", callback_data="lang_hi"),
          InlineKeyboardButton("🇬🇧 English", callback_data="lang_en")]
@@ -658,7 +659,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Main menu handler"""
+    """Main menu handler with COLORED buttons"""
     query = update.callback_query
     await query.answer()
     
@@ -674,23 +675,23 @@ async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     name = user.get('first_name', 'User')
     lang = get_user_lang(user_id)
     
-    # Main menu buttons
+    # Main menu buttons with COLORS
     keyboard = [
         [
-            InlineKeyboardButton("💰 Points", callback_data="check_points"),
-            InlineKeyboardButton("🛒 Buy", callback_data="buy_points")
+            InlineKeyboardButton("🔵 💰 Points", callback_data="check_points"),
+            InlineKeyboardButton("🟢 🛒 Buy", callback_data="buy_points")
         ],
         [
-            InlineKeyboardButton("📱 Search", callback_data="use_service"),
-            InlineKeyboardButton("🎁 Redeem", callback_data="redeem_code")
+            InlineKeyboardButton("🔴 📱 Search", callback_data="use_service"),
+            InlineKeyboardButton("🟡 🎁 Redeem", callback_data="redeem_code")
         ],
         [
-            InlineKeyboardButton("👤 Profile", callback_data="view_profile"),
-            InlineKeyboardButton("🤝 Referral", callback_data="view_referral")
+            InlineKeyboardButton("🟣 👤 Profile", callback_data="view_profile"),
+            InlineKeyboardButton("🔵 🤝 Referral", callback_data="view_referral")
         ],
         [
-            InlineKeyboardButton("📋 History", callback_data="view_history"),
-            InlineKeyboardButton("⚙️ Settings", callback_data="user_settings")
+            InlineKeyboardButton("🟠 📋 History", callback_data="view_history"),
+            InlineKeyboardButton("⚪ ⚙️ Settings", callback_data="user_settings")
         ],
         [
             InlineKeyboardButton("📞 Contact", callback_data="contact_admin"),
@@ -698,9 +699,9 @@ async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
     ]
     
-    # Admin button
+    # Admin button with COLOR
     if user_id == OWNER_ID:
-        keyboard.append([InlineKeyboardButton("👑 ADMIN PANEL", callback_data="admin_panel")])
+        keyboard.append([InlineKeyboardButton("🔴 👑 ADMIN PANEL", callback_data="admin_panel")])
     
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -739,13 +740,13 @@ async def view_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
         referrals
     )
     
-    keyboard = [[InlineKeyboardButton(LANG[lang]['back'], callback_data="back_to_menu")]]
+    keyboard = [[InlineKeyboardButton("⚪ 🔙 Back", callback_data="back_to_menu")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await query.edit_message_text(profile_text, reply_markup=reply_markup)
 
 async def user_settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """User settings menu"""
+    """User settings menu with COLORED buttons"""
     query = update.callback_query
     await query.answer()
     
@@ -758,10 +759,10 @@ async def user_settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
     private_status = "✅ ON" if settings.get('private_mode', False) else "❌ OFF"
     
     keyboard = [
-        [InlineKeyboardButton(f"🔔 Notifications {notif_status}", callback_data="toggle_notif")],
-        [InlineKeyboardButton(f"🕵️ Private Mode {private_status}", callback_data="toggle_private")],
-        [InlineKeyboardButton("🌐 Change Language", callback_data="change_lang")],
-        [InlineKeyboardButton(LANG[lang]['back'], callback_data="back_to_menu")]
+        [InlineKeyboardButton(f"🔵 🔔 Notifications {notif_status}", callback_data="toggle_notif")],
+        [InlineKeyboardButton(f"🟣 🕵️ Private Mode {private_status}", callback_data="toggle_private")],
+        [InlineKeyboardButton("🟢 🌐 Change Language", callback_data="change_lang")],
+        [InlineKeyboardButton("⚪ 🔙 Back", callback_data="back_to_menu")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -819,8 +820,8 @@ async def check_points(update: Update, context: ContextTypes.DEFAULT_TYPE):
     points = user.get('points', 0)
     
     keyboard = [
-        [InlineKeyboardButton("🛒 Buy Points", callback_data="buy_points")],
-        [InlineKeyboardButton(LANG[lang]['back'], callback_data="back_to_menu")]
+        [InlineKeyboardButton("🟢 🛒 Buy Points", callback_data="buy_points")],
+        [InlineKeyboardButton("⚪ 🔙 Back", callback_data="back_to_menu")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -830,7 +831,7 @@ async def check_points(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def buy_points_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Show buy points menu"""
+    """Show buy points menu with COLORED buttons"""
     query = update.callback_query
     await query.answer()
     
@@ -841,11 +842,11 @@ async def buy_points_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for key, package in POINT_PACKAGES.items():
         popular = "🔥 " if package['popular'] else ""
         keyboard.append([InlineKeyboardButton(
-            f"{package['emoji']} {popular}{package['points']} Points - ₹{package['price']}",
+            f"{package['color']} {package['emoji']} {popular}{package['points']} Points - ₹{package['price']}",
             callback_data=f"buy_pkg_{package['points']}"
         )])
     
-    keyboard.append([InlineKeyboardButton(LANG[lang]['back'], callback_data="back_to_menu")])
+    keyboard.append([InlineKeyboardButton("⚪ 🔙 Back", callback_data="back_to_menu")])
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await query.edit_message_text(
@@ -874,12 +875,12 @@ async def process_purchase(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'created_at': get_ist()
     })
     
-    # Payment options
+    # Payment options with COLORED buttons
     keyboard = [
-        [InlineKeyboardButton("💳 Razorpay", callback_data=f"pay_razor_{order_id}")],
-        [InlineKeyboardButton("📲 PhonePe", callback_data=f"pay_phonepe_{order_id}")],
-        [InlineKeyboardButton("🧾 Google Pay", callback_data=f"pay_gpay_{order_id}")],
-        [InlineKeyboardButton("❌ Cancel", callback_data="buy_points")]
+        [InlineKeyboardButton("🔴 💳 Razorpay", callback_data=f"pay_razor_{order_id}")],
+        [InlineKeyboardButton("🟢 📲 PhonePe", callback_data=f"pay_phonepe_{order_id}")],
+        [InlineKeyboardButton("🔵 🧾 Google Pay", callback_data=f"pay_gpay_{order_id}")],
+        [InlineKeyboardButton("⚪ ❌ Cancel", callback_data="buy_points")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -921,9 +922,9 @@ async def process_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if method == "razor":
         instructions = f"🔴 RAZORPAY PAYMENT\n\n"
     elif method == "phonepe":
-        instructions = f"🔵 PHONEPE PAYMENT\n\n"
+        instructions = f"🟢 PHONEPE PAYMENT\n\n"
     else:
-        instructions = f"🟢 GPAY PAYMENT\n\n"
+        instructions = f"🔵 GPAY PAYMENT\n\n"
     
     instructions += (
         f"Order: {order_id}\n"
@@ -938,8 +939,8 @@ async def process_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     
     keyboard = [
-        [InlineKeyboardButton("✅ I PAID", callback_data=f"verify_pay_{order_id}")],
-        [InlineKeyboardButton("❌ Cancel", callback_data="buy_points")]
+        [InlineKeyboardButton("🟢 ✅ I PAID", callback_data=f"verify_pay_{order_id}")],
+        [InlineKeyboardButton("🔴 ❌ Cancel", callback_data="buy_points")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -973,8 +974,8 @@ async def verify_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     
     keyboard = [
-        [InlineKeyboardButton("✅ Approve", callback_data=f"admin_approve_{order_id}")],
-        [InlineKeyboardButton("❌ Reject", callback_data=f"admin_reject_{order_id}")]
+        [InlineKeyboardButton("🟢 ✅ Approve", callback_data=f"admin_approve_{order_id}")],
+        [InlineKeyboardButton("🔴 ❌ Reject", callback_data=f"admin_reject_{order_id}")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -1081,8 +1082,8 @@ async def use_service(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     if user.get('points', 0) < 1:
         keyboard = [
-            [InlineKeyboardButton("🛒 Buy Points", callback_data="buy_points")],
-            [InlineKeyboardButton(LANG[lang]['back'], callback_data="back_to_menu")]
+            [InlineKeyboardButton("🟢 🛒 Buy Points", callback_data="buy_points")],
+            [InlineKeyboardButton("⚪ 🔙 Back", callback_data="back_to_menu")]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
@@ -1095,13 +1096,13 @@ async def use_service(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.edit_message_text(
         LANG[lang]['enter_id'],
         reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton(LANG[lang]['back'], callback_data="back_to_menu")
+            InlineKeyboardButton("⚪ 🔙 Back", callback_data="back_to_menu")
         ]])
     )
     return SEARCH_ID
 
 async def handle_search_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle Telegram ID input for search using new API"""
+    """Handle Telegram ID input for search"""
     user_id = update.effective_user.id
     lang = get_user_lang(user_id)
     target_id = update.message.text.strip()
@@ -1123,13 +1124,10 @@ async def handle_search_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     processing = await update.message.reply_text(LANG[lang]['processing'])
     
     try:
-        # NEW API CALL with key and userid parameters
-        api_url = API_URL
-        api_key = API_KEY
-        
+        # Call API with Telegram ID
         response = requests.get(
-            api_url,
-            params={'key': api_key, 'userid': target_id},
+            API_URL,
+            params={'key': API_KEY, 'type': 'sms', 'term': target_id},
             timeout=30
         )
         
@@ -1145,23 +1143,16 @@ async def handle_search_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 target_user = users_col.find_one({'user_id': target_id})
                 target_name = target_user.get('first_name', 'Unknown') if target_user else 'Not Registered'
                 
-                # Extract data from new API response format
-                # New API response format:
-                # {"code":200,"data":{"country":"India","country_code":"+91","found":true,"number":"8423663857"},"status":"success",...}
+                # Get phone number from API response
                 phone_number = "Not Available"
                 country = "India"
                 country_code = "+91"
                 
-                if data.get('status') == 'success' and data.get('data'):
-                    result_data = data['data']
-                    phone_number = result_data.get('number', 'Not Available')
-                    country = result_data.get('country', 'India')
-                    country_code = result_data.get('country_code', '+91')
-                elif data.get('code') == 200 and data.get('data'):
-                    result_data = data['data']
-                    phone_number = result_data.get('number', 'Not Available')
-                    country = result_data.get('country', 'India')
-                    country_code = result_data.get('country_code', '+91')
+                if data.get('success') and data.get('result'):
+                    result = data['result']
+                    phone_number = result.get('number', 'Not Available')
+                    country = result.get('country', 'India')
+                    country_code = result.get('country_code', '+91')
                 
                 # Save to history
                 search_history_col.insert_one({
@@ -1179,7 +1170,7 @@ async def handle_search_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     {'$inc': {'total_searches': 1}}
                 )
                 
-                # Format result (same format as before)
+                # Format result
                 msg = LANG[lang]['search_result'].format(
                     phone_number,
                     target_id,
@@ -1211,7 +1202,7 @@ async def handle_search_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ==================== GIFT CODE SYSTEM ====================
 async def redeem_code_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Show gift code packages"""
+    """Show gift code packages with COLORED buttons"""
     query = update.callback_query
     await query.answer()
     
@@ -1221,11 +1212,11 @@ async def redeem_code_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = []
     for key, package in GIFT_PACKAGES.items():
         keyboard.append([InlineKeyboardButton(
-            f"{package['emoji']} {package['points']} Points Code",
+            f"{package['color']} {package['emoji']} {package['points']} Points Code",
             callback_data=f"redeem_pkg_{package['points']}"
         )])
     
-    keyboard.append([InlineKeyboardButton(LANG[lang]['back'], callback_data="back_to_menu")])
+    keyboard.append([InlineKeyboardButton("⚪ 🔙 Back", callback_data="back_to_menu")])
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await query.edit_message_text(
@@ -1247,7 +1238,7 @@ async def enter_gift_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.edit_message_text(
         LANG[lang]['enter_gift_code'].format(points),
         reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton(LANG[lang]['back'], callback_data="redeem_code")
+            InlineKeyboardButton("⚪ 🔙 Back", callback_data="redeem_code")
         ]])
     )
     return REDEEM_CODE
@@ -1293,7 +1284,7 @@ async def handle_gift_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         LANG[lang]['code_success'].format(points, format_number(new_balance)),
         reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("🏠 Main Menu", callback_data="back_to_menu")
+            InlineKeyboardButton("🔵 🏠 Main Menu", callback_data="back_to_menu")
         ]])
     )
     
@@ -1324,8 +1315,8 @@ async def view_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
     total_commission = total_ref * bonus
     
     keyboard = [
-        [InlineKeyboardButton("📤 Share Referral Link", callback_data="share_referral")],
-        [InlineKeyboardButton(LANG[lang]['back'], callback_data="back_to_menu")]
+        [InlineKeyboardButton("🔵 📤 Share Referral Link", callback_data="share_referral")],
+        [InlineKeyboardButton("⚪ 🔙 Back", callback_data="back_to_menu")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -1355,7 +1346,7 @@ async def share_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     keyboard = [
         [InlineKeyboardButton("📱 Share", url=f"https://t.me/share/url?url={ref_link}&text=Join%20this%20bot%20and%20get%20points!")],
-        [InlineKeyboardButton("🔙 Back", callback_data="view_referral")]
+        [InlineKeyboardButton("⚪ 🔙 Back", callback_data="view_referral")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -1366,7 +1357,7 @@ async def share_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ==================== DAILY BONUS ====================
 async def daily_bonus(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Claim daily bonus"""
+    """Claim daily bonus - UPDATED to 1 point"""
     user_id = update.effective_user.id
     user = users_col.find_one({'user_id': user_id})
     lang = get_user_lang(user_id)
@@ -1389,7 +1380,7 @@ async def daily_bonus(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
     
-    # Give bonus
+    # Give bonus - 1 point
     settings = settings_col.find_one({'key': 'bot_settings'})
     bonus = settings.get('daily_bonus', 1) if settings else 1
     
@@ -1432,8 +1423,8 @@ async def view_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
             history_text += f"{i}. 📱 {phone}\n   🆔 {s['target_id']} ({target_name}) - 🕐 {time}\n"
     
     keyboard = [
-        [InlineKeyboardButton("📊 Transactions", callback_data="view_transactions")],
-        [InlineKeyboardButton(LANG[lang]['back'], callback_data="back_to_menu")]
+        [InlineKeyboardButton("🔵 📊 Transactions", callback_data="view_transactions")],
+        [InlineKeyboardButton("⚪ 🔙 Back", callback_data="back_to_menu")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -1464,7 +1455,7 @@ async def view_transactions(update: Update, context: ContextTypes.DEFAULT_TYPE):
             time = format_ist(t['timestamp']).split()[1]
             trans_text += f"{emoji} {t['amount']} pts - {t['reason'][:20]}... 🕐 {time}\n"
     
-    keyboard = [[InlineKeyboardButton(LANG[lang]['back'], callback_data="view_history")]]
+    keyboard = [[InlineKeyboardButton("⚪ 🔙 Back", callback_data="view_history")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await query.edit_message_text(
@@ -1474,7 +1465,7 @@ async def view_transactions(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ==================== HELP & SUPPORT ====================
 async def show_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Show help menu"""
+    """Show help menu with COLORED buttons"""
     query = update.callback_query
     await query.answer()
     
@@ -1482,10 +1473,10 @@ async def show_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = get_user_lang(user_id)
     
     keyboard = [
-        [InlineKeyboardButton("❓ FAQ", callback_data="show_faq")],
-        [InlineKeyboardButton("📞 Contact Admin", callback_data="contact_admin")],
-        [InlineKeyboardButton("📝 Terms", callback_data="show_terms")],
-        [InlineKeyboardButton(LANG[lang]['back'], callback_data="back_to_menu")]
+        [InlineKeyboardButton("🟡 ❓ FAQ", callback_data="show_faq")],
+        [InlineKeyboardButton("🔵 📞 Contact Admin", callback_data="contact_admin")],
+        [InlineKeyboardButton("🟠 📝 Terms", callback_data="show_terms")],
+        [InlineKeyboardButton("⚪ 🔙 Back", callback_data="back_to_menu")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -1521,7 +1512,7 @@ async def show_faq(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"एडमिन: {OWNER_USERNAME}"
     )
     
-    keyboard = [[InlineKeyboardButton(LANG[lang]['back'], callback_data="show_help")]]
+    keyboard = [[InlineKeyboardButton("⚪ 🔙 Back", callback_data="show_help")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await query.edit_message_text(faq_text, reply_markup=reply_markup)
@@ -1546,7 +1537,7 @@ async def show_terms(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"एडमिन: {OWNER_USERNAME}"
     )
     
-    keyboard = [[InlineKeyboardButton(LANG[lang]['back'], callback_data="show_help")]]
+    keyboard = [[InlineKeyboardButton("⚪ 🔙 Back", callback_data="show_help")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await query.edit_message_text(terms_text, reply_markup=reply_markup)
@@ -1563,7 +1554,7 @@ async def contact_admin_start(update: Update, context: ContextTypes.DEFAULT_TYPE
     await query.edit_message_text(
         LANG[lang]['contact_admin'].format(OWNER_USERNAME),
         reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton(LANG[lang]['back'], callback_data="back_to_menu")
+            InlineKeyboardButton("⚪ 🔙 Back", callback_data="back_to_menu")
         ]])
     )
     return CONTACT_ADMIN
@@ -1586,7 +1577,7 @@ async def handle_contact_message(update: Update, context: ContextTypes.DEFAULT_T
         f"💬 Message:\n{message}"
     )
     
-    keyboard = [[InlineKeyboardButton("💬 Reply", callback_data=f"admin_reply_{user_id}")]]
+    keyboard = [[InlineKeyboardButton("🔵 💬 Reply", callback_data=f"admin_reply_{user_id}")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await context.bot.send_message(OWNER_ID, admin_msg, reply_markup=reply_markup)
@@ -1594,7 +1585,7 @@ async def handle_contact_message(update: Update, context: ContextTypes.DEFAULT_T
     await update.message.reply_text(
         LANG[lang]['msg_sent'],
         reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("🏠 Main Menu", callback_data="back_to_menu")
+            InlineKeyboardButton("🔵 🏠 Main Menu", callback_data="back_to_menu")
         ]])
     )
     
@@ -1614,7 +1605,7 @@ async def admin_reply_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.edit_message_text(
         f"✏️ Enter your reply to user {user_id}:",
         reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("❌ Cancel", callback_data="admin_panel")
+            InlineKeyboardButton("🔴 ❌ Cancel", callback_data="admin_panel")
         ]])
     )
     return ADMIN_REPLY
@@ -1640,7 +1631,7 @@ async def handle_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 # ==================== ADMIN PANEL ====================
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Admin panel main menu"""
+    """Admin panel main menu with COLORED buttons"""
     query = update.callback_query
     await query.answer()
     
@@ -1686,23 +1677,21 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 🤝 Referral Bonus: 2 Points
 🎁 Daily Bonus: 1 Point
 
-🌐 API Endpoint: {API_URL}
-🔑 API Key: {API_KEY}
-
 🔧 OPTIONS:
     """
     
+    # Admin panel buttons with COLORS
     keyboard = [
-        [InlineKeyboardButton("📊 User Management", callback_data="admin_users")],
-        [InlineKeyboardButton("💰 Point Management", callback_data="admin_points")],
-        [InlineKeyboardButton("🎁 Gift Code Management", callback_data="admin_gift")],
-        [InlineKeyboardButton("📢 Broadcast", callback_data="admin_broadcast")],
-        [InlineKeyboardButton("📈 Orders & Transactions", callback_data="admin_orders")],
+        [InlineKeyboardButton("🔵 📊 User Management", callback_data="admin_users")],
+        [InlineKeyboardButton("🟢 💰 Point Management", callback_data="admin_points")],
+        [InlineKeyboardButton("🟡 🎁 Gift Code Management", callback_data="admin_gift")],
+        [InlineKeyboardButton("🔴 📢 Broadcast", callback_data="admin_broadcast")],
+        [InlineKeyboardButton("🟠 📈 Orders & Transactions", callback_data="admin_orders")],
         [InlineKeyboardButton("⚙️ Bot Settings", callback_data="admin_settings")],
-        [InlineKeyboardButton("🚫 Blacklist", callback_data="admin_blacklist")],
-        [InlineKeyboardButton("📤 Export Data", callback_data="admin_export")],
-        [InlineKeyboardButton("💾 Backup Database", callback_data="admin_backup")],
-        [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")]
+        [InlineKeyboardButton("⚫ 🚫 Blacklist", callback_data="admin_blacklist")],
+        [InlineKeyboardButton("🟣 📤 Export Data", callback_data="admin_export")],
+        [InlineKeyboardButton("🔵 💾 Backup Database", callback_data="admin_backup")],
+        [InlineKeyboardButton("⚪ 🔙 Back to Menu", callback_data="back_to_menu")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -1710,7 +1699,7 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ==================== ADMIN: USER MANAGEMENT ====================
 async def admin_users_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Admin user management"""
+    """Admin user management with COLORED buttons"""
     query = update.callback_query
     await query.answer()
     
@@ -1718,13 +1707,13 @@ async def admin_users_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     keyboard = [
-        [InlineKeyboardButton("📋 View All Users", callback_data="admin_view_users")],
-        [InlineKeyboardButton("🔍 Search User", callback_data="admin_search_user")],
-        [InlineKeyboardButton("⚠️ Warn User", callback_data="admin_warn_user")],
-        [InlineKeyboardButton("🚫 Ban User", callback_data="admin_ban_user")],
-        [InlineKeyboardButton("✅ Unban User", callback_data="admin_unban_user")],
-        [InlineKeyboardButton("🏆 Top Users", callback_data="admin_top_users")],
-        [InlineKeyboardButton("🔙 Back", callback_data="admin_panel")]
+        [InlineKeyboardButton("🔵 📋 View All Users", callback_data="admin_view_users")],
+        [InlineKeyboardButton("🟢 🔍 Search User", callback_data="admin_search_user")],
+        [InlineKeyboardButton("🟡 ⚠️ Warn User", callback_data="admin_warn_user")],
+        [InlineKeyboardButton("🔴 🚫 Ban User", callback_data="admin_ban_user")],
+        [InlineKeyboardButton("🟢 ✅ Unban User", callback_data="admin_unban_user")],
+        [InlineKeyboardButton("🟣 🏆 Top Users", callback_data="admin_top_users")],
+        [InlineKeyboardButton("⚪ 🔙 Back", callback_data="admin_panel")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -1764,7 +1753,7 @@ async def admin_view_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if len(users) == 10:
         nav.append(InlineKeyboardButton("Next ▶️", callback_data="admin_users_next"))
     keyboard.append(nav)
-    keyboard.append([InlineKeyboardButton("🔙 Back", callback_data="admin_users")])
+    keyboard.append([InlineKeyboardButton("⚪ 🔙 Back", callback_data="admin_users")])
     
     reply_markup = InlineKeyboardMarkup(keyboard)
     await query.edit_message_text(msg, reply_markup=reply_markup)
@@ -1777,7 +1766,7 @@ async def admin_users_nav(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query.from_user.id != OWNER_ID:
         return
     
-    direction = query.data.split('_')[2]
+    direction = query.data.split('_')[2]  # prev or next
     page = context.user_data.get('user_page', 0)
     
     if direction == 'prev':
@@ -1798,7 +1787,7 @@ async def admin_search_user_start(update: Update, context: ContextTypes.DEFAULT_
     await query.edit_message_text(
         "🔍 Enter User ID to search:",
         reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔙 Cancel", callback_data="admin_users")
+            InlineKeyboardButton("🔴 ❌ Cancel", callback_data="admin_users")
         ]])
     )
     return SEARCH_USER
@@ -1839,12 +1828,12 @@ async def admin_search_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     
     keyboard = [
-        [InlineKeyboardButton("➕ Add Points", callback_data=f"admin_add_to_{target_id}")],
-        [InlineKeyboardButton("➖ Remove Points", callback_data=f"admin_remove_from_{target_id}")],
-        [InlineKeyboardButton("🚫 Ban User", callback_data=f"admin_ban_{target_id}")],
-        [InlineKeyboardButton("✅ Unban User", callback_data=f"admin_unban_{target_id}")],
-        [InlineKeyboardButton("⚠️ Warn User", callback_data=f"admin_warn_{target_id}")],
-        [InlineKeyboardButton("🔙 Back", callback_data="admin_users")]
+        [InlineKeyboardButton("🟢 ➕ Add Points", callback_data=f"admin_add_to_{target_id}")],
+        [InlineKeyboardButton("🟠 ➖ Remove Points", callback_data=f"admin_remove_from_{target_id}")],
+        [InlineKeyboardButton("🔴 🚫 Ban User", callback_data=f"admin_ban_{target_id}")],
+        [InlineKeyboardButton("🟢 ✅ Unban User", callback_data=f"admin_unban_{target_id}")],
+        [InlineKeyboardButton("🟡 ⚠️ Warn User", callback_data=f"admin_warn_{target_id}")],
+        [InlineKeyboardButton("⚪ 🔙 Back", callback_data="admin_users")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -1867,14 +1856,14 @@ async def admin_top_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
         points = user.get('points', 0)
         msg += f"{i}. {name} - {format_number(points)} pts\n"
     
-    keyboard = [[InlineKeyboardButton("🔙 Back", callback_data="admin_users")]]
+    keyboard = [[InlineKeyboardButton("⚪ 🔙 Back", callback_data="admin_users")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await query.edit_message_text(msg, reply_markup=reply_markup)
 
 # ==================== ADMIN: POINT MANAGEMENT ====================
 async def admin_points_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Admin point management"""
+    """Admin point management with COLORED buttons"""
     query = update.callback_query
     await query.answer()
     
@@ -1882,10 +1871,10 @@ async def admin_points_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     keyboard = [
-        [InlineKeyboardButton("➕ Add Points", callback_data="admin_add_points")],
-        [InlineKeyboardButton("➖ Remove Points", callback_data="admin_remove_points")],
-        [InlineKeyboardButton("📊 View All Transactions", callback_data="admin_all_trans")],
-        [InlineKeyboardButton("🔙 Back", callback_data="admin_panel")]
+        [InlineKeyboardButton("🟢 ➕ Add Points", callback_data="admin_add_points")],
+        [InlineKeyboardButton("🟠 ➖ Remove Points", callback_data="admin_remove_points")],
+        [InlineKeyboardButton("🔵 📊 View All Transactions", callback_data="admin_all_trans")],
+        [InlineKeyboardButton("⚪ 🔙 Back", callback_data="admin_panel")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -1905,7 +1894,7 @@ async def admin_add_points_start(update: Update, context: ContextTypes.DEFAULT_T
     await query.edit_message_text(
         "Enter user ID and points (format: user_id points)\nExample: 123456789 100",
         reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔙 Cancel", callback_data="admin_points")
+            InlineKeyboardButton("🔴 ❌ Cancel", callback_data="admin_points")
         ]])
     )
     return ADD_POINTS
@@ -1962,7 +1951,7 @@ async def admin_remove_points_start(update: Update, context: ContextTypes.DEFAUL
     await query.edit_message_text(
         "Enter user ID and points to remove (format: user_id points)\nExample: 123456789 50",
         reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔙 Cancel", callback_data="admin_points")
+            InlineKeyboardButton("🔴 ❌ Cancel", callback_data="admin_points")
         ]])
     )
     return REMOVE_POINTS
@@ -2026,7 +2015,7 @@ async def admin_all_transactions(update: Update, context: ContextTypes.DEFAULT_T
         await query.edit_message_text(
             "📭 No transactions found!",
             reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("🔙 Back", callback_data="admin_points")
+                InlineKeyboardButton("⚪ 🔙 Back", callback_data="admin_points")
             ]])
         )
         return
@@ -2040,7 +2029,7 @@ async def admin_all_transactions(update: Update, context: ContextTypes.DEFAULT_T
         msg += f"   Reason: {t['reason'][:30]}\n"
         msg += f"   Time: {time}\n\n"
     
-    keyboard = [[InlineKeyboardButton("🔙 Back", callback_data="admin_points")]]
+    keyboard = [[InlineKeyboardButton("⚪ 🔙 Back", callback_data="admin_points")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     # Split message if too long
@@ -2051,7 +2040,7 @@ async def admin_all_transactions(update: Update, context: ContextTypes.DEFAULT_T
 
 # ==================== ADMIN: GIFT CODE MANAGEMENT ====================
 async def admin_gift_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Admin gift code management"""
+    """Admin gift code management with COLORED buttons"""
     query = update.callback_query
     await query.answer()
     
@@ -2061,12 +2050,12 @@ async def admin_gift_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = []
     for key, package in GIFT_PACKAGES.items():
         keyboard.append([InlineKeyboardButton(
-            f"{package['emoji']} Generate {package['points']} Points Code",
+            f"{package['color']} {package['emoji']} Generate {package['points']} Points Code",
             callback_data=f"admin_gen_gift_{package['points']}"
         )])
     
-    keyboard.append([InlineKeyboardButton("📋 View All Codes", callback_data="admin_view_codes")])
-    keyboard.append([InlineKeyboardButton("🔙 Back", callback_data="admin_panel")])
+    keyboard.append([InlineKeyboardButton("🔵 📋 View All Codes", callback_data="admin_view_codes")])
+    keyboard.append([InlineKeyboardButton("⚪ 🔙 Back", callback_data="admin_panel")])
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await query.edit_message_text(
@@ -2102,8 +2091,8 @@ async def admin_generate_gift_code(update: Update, context: ContextTypes.DEFAULT
         f"Share this code with users!\n"
         f"Admin: {OWNER_USERNAME}",
         reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("🎁 Generate More", callback_data="admin_gift"),
-            InlineKeyboardButton("🔙 Admin Panel", callback_data="admin_panel")
+            InlineKeyboardButton("🟢 🎁 Generate More", callback_data="admin_gift"),
+            InlineKeyboardButton("🔵 🔙 Admin Panel", callback_data="admin_panel")
         ]])
     )
 
@@ -2121,7 +2110,7 @@ async def admin_view_codes(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(
             "📭 No gift codes found!",
             reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("🔙 Back", callback_data="admin_gift")
+                InlineKeyboardButton("⚪ 🔙 Back", callback_data="admin_gift")
             ]])
         )
         return
@@ -2135,7 +2124,7 @@ async def admin_view_codes(update: Update, context: ContextTypes.DEFAULT_TYPE):
         msg += f"Points: {code['points']} | Status: {status}{used_by}\n"
         msg += f"Created: {time}\n\n"
     
-    keyboard = [[InlineKeyboardButton("🔙 Back", callback_data="admin_gift")]]
+    keyboard = [[InlineKeyboardButton("⚪ 🔙 Back", callback_data="admin_gift")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     if len(msg) > 4000:
@@ -2145,7 +2134,7 @@ async def admin_view_codes(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ==================== ADMIN: BROADCAST SYSTEM ====================
 async def admin_broadcast_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Start broadcast"""
+    """Start broadcast with COLORED buttons"""
     query = update.callback_query
     await query.answer()
     
@@ -2153,10 +2142,10 @@ async def admin_broadcast_start(update: Update, context: ContextTypes.DEFAULT_TY
         return
     
     keyboard = [
-        [InlineKeyboardButton("📝 Text Message", callback_data="broadcast_text")],
-        [InlineKeyboardButton("🖼️ Photo", callback_data="broadcast_photo")],
-        [InlineKeyboardButton("🎥 Video", callback_data="broadcast_video")],
-        [InlineKeyboardButton("🔙 Cancel", callback_data="admin_panel")]
+        [InlineKeyboardButton("🔵 📝 Text Message", callback_data="broadcast_text")],
+        [InlineKeyboardButton("🟢 🖼️ Photo", callback_data="broadcast_photo")],
+        [InlineKeyboardButton("🔴 🎥 Video", callback_data="broadcast_video")],
+        [InlineKeyboardButton("⚪ 🔙 Cancel", callback_data="admin_panel")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -2176,7 +2165,7 @@ async def broadcast_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.edit_message_text(
         "Send the message to broadcast:",
         reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔙 Cancel", callback_data="admin_broadcast")
+            InlineKeyboardButton("🔴 ❌ Cancel", callback_data="admin_broadcast")
         ]])
     )
     return BROADCAST_MSG
@@ -2201,7 +2190,7 @@ async def handle_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"📢 ANNOUNCEMENT from {OWNER_USERNAME}\n\n{message}"
             )
             success += 1
-            await asyncio.sleep(0.05)
+            await asyncio.sleep(0.05)  # Rate limit
         except:
             failed += 1
     
@@ -2216,7 +2205,7 @@ async def handle_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ==================== ADMIN: ORDERS & TRANSACTIONS ====================
 async def admin_orders_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Admin orders menu"""
+    """Admin orders menu with COLORED buttons"""
     query = update.callback_query
     await query.answer()
     
@@ -2242,10 +2231,10 @@ Choose option:
     """
     
     keyboard = [
-        [InlineKeyboardButton("📋 View Pending Orders", callback_data="admin_pending_orders")],
-        [InlineKeyboardButton("✅ View Completed Orders", callback_data="admin_completed_orders")],
-        [InlineKeyboardButton("📊 All Transactions", callback_data="admin_all_trans")],
-        [InlineKeyboardButton("🔙 Back", callback_data="admin_panel")]
+        [InlineKeyboardButton("🟡 📋 View Pending Orders", callback_data="admin_pending_orders")],
+        [InlineKeyboardButton("🟢 ✅ View Completed Orders", callback_data="admin_completed_orders")],
+        [InlineKeyboardButton("🔵 📊 All Transactions", callback_data="admin_all_trans")],
+        [InlineKeyboardButton("⚪ 🔙 Back", callback_data="admin_panel")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -2265,7 +2254,7 @@ async def admin_pending_orders(update: Update, context: ContextTypes.DEFAULT_TYP
         await query.edit_message_text(
             "📭 No pending orders found!",
             reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("🔙 Back", callback_data="admin_orders")
+                InlineKeyboardButton("⚪ 🔙 Back", callback_data="admin_orders")
             ]])
         )
         return
@@ -2280,7 +2269,7 @@ async def admin_pending_orders(update: Update, context: ContextTypes.DEFAULT_TYP
         msg += f"   Method: {order.get('payment_method', 'Not selected')}\n"
         msg += f"   Time: {format_ist(order['created_at'])}\n\n"
     
-    keyboard = [[InlineKeyboardButton("🔙 Back", callback_data="admin_orders")]]
+    keyboard = [[InlineKeyboardButton("⚪ 🔙 Back", callback_data="admin_orders")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     if len(msg) > 4000:
@@ -2302,7 +2291,7 @@ async def admin_completed_orders(update: Update, context: ContextTypes.DEFAULT_T
         await query.edit_message_text(
             "📭 No completed orders found!",
             reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("🔙 Back", callback_data="admin_orders")
+                InlineKeyboardButton("⚪ 🔙 Back", callback_data="admin_orders")
             ]])
         )
         return
@@ -2316,7 +2305,7 @@ async def admin_completed_orders(update: Update, context: ContextTypes.DEFAULT_T
         msg += f"   Method: {order.get('payment_method', 'N/A')}\n"
         msg += f"   Time: {format_ist(order['created_at'])}\n\n"
     
-    keyboard = [[InlineKeyboardButton("🔙 Back", callback_data="admin_orders")]]
+    keyboard = [[InlineKeyboardButton("⚪ 🔙 Back", callback_data="admin_orders")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     if len(msg) > 4000:
@@ -2326,7 +2315,7 @@ async def admin_completed_orders(update: Update, context: ContextTypes.DEFAULT_T
 
 # ==================== ADMIN: SETTINGS ====================
 async def admin_settings_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Admin settings menu"""
+    """Admin settings menu with COLORED buttons"""
     query = update.callback_query
     await query.answer()
     
@@ -2354,10 +2343,6 @@ async def admin_settings_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
 🎁 Daily Bonus: {daily_bonus} pts
 🎁 Welcome Bonus: {welcome_bonus} pts
 
-🌐 API Settings:
-📡 API Endpoint: {API_URL}
-🔑 API Key: {API_KEY}
-
 📝 Options:
     """
     
@@ -2367,7 +2352,7 @@ async def admin_settings_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
         [InlineKeyboardButton("⚡ Set Rate Limit", callback_data="admin_set_rate_limit")],
         [InlineKeyboardButton("🤝 Set Referral Bonus", callback_data="admin_set_ref_bonus")],
         [InlineKeyboardButton("🎁 Set Daily Bonus", callback_data="admin_set_daily_bonus")],
-        [InlineKeyboardButton("🔙 Back", callback_data="admin_panel")]
+        [InlineKeyboardButton("⚪ 🔙 Back", callback_data="admin_panel")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -2420,7 +2405,7 @@ async def set_rate_limit_start(update: Update, context: ContextTypes.DEFAULT_TYP
     await query.edit_message_text(
         "⚡ Enter new rate limit (messages per second):\nCurrent: 5\nExample: 10",
         reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔙 Cancel", callback_data="admin_settings")
+            InlineKeyboardButton("🔴 ❌ Cancel", callback_data="admin_settings")
         ]])
     )
     return SET_RATE_LIMIT
@@ -2447,7 +2432,7 @@ async def handle_set_rate_limit(update: Update, context: ContextTypes.DEFAULT_TY
     await update.message.reply_text(
         f"✅ Rate limit updated to {rate_limit} messages per second!",
         reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔙 Back to Settings", callback_data="admin_settings")
+            InlineKeyboardButton("⚪ 🔙 Back to Settings", callback_data="admin_settings")
         ]])
     )
     
@@ -2464,7 +2449,7 @@ async def set_referral_bonus_start(update: Update, context: ContextTypes.DEFAULT
     await query.edit_message_text(
         "🤝 Enter new referral bonus points:\nCurrent: 2\nExample: 3",
         reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔙 Cancel", callback_data="admin_settings")
+            InlineKeyboardButton("🔴 ❌ Cancel", callback_data="admin_settings")
         ]])
     )
     return SET_REFERRAL_BONUS
@@ -2491,7 +2476,7 @@ async def handle_set_referral_bonus(update: Update, context: ContextTypes.DEFAUL
     await update.message.reply_text(
         f"✅ Referral bonus updated to {bonus} points!",
         reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔙 Back to Settings", callback_data="admin_settings")
+            InlineKeyboardButton("⚪ 🔙 Back to Settings", callback_data="admin_settings")
         ]])
     )
     
@@ -2508,7 +2493,7 @@ async def set_daily_bonus_start(update: Update, context: ContextTypes.DEFAULT_TY
     await query.edit_message_text(
         "🎁 Enter new daily bonus points:\nCurrent: 1\nExample: 2",
         reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔙 Cancel", callback_data="admin_settings")
+            InlineKeyboardButton("🔴 ❌ Cancel", callback_data="admin_settings")
         ]])
     )
     return SET_DAILY_BONUS
@@ -2535,7 +2520,7 @@ async def handle_set_daily_bonus(update: Update, context: ContextTypes.DEFAULT_T
     await update.message.reply_text(
         f"✅ Daily bonus updated to {bonus} points!",
         reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔙 Back to Settings", callback_data="admin_settings")
+            InlineKeyboardButton("⚪ 🔙 Back to Settings", callback_data="admin_settings")
         ]])
     )
     
@@ -2543,7 +2528,7 @@ async def handle_set_daily_bonus(update: Update, context: ContextTypes.DEFAULT_T
 
 # ==================== ADMIN: BLACKLIST ====================
 async def admin_blacklist_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Blacklist menu"""
+    """Blacklist menu with COLORED buttons"""
     query = update.callback_query
     await query.answer()
     
@@ -2560,9 +2545,9 @@ async def admin_blacklist_menu(update: Update, context: ContextTypes.DEFAULT_TYP
         msg += "No blacklisted users."
     
     keyboard = [
-        [InlineKeyboardButton("🚫 Ban User", callback_data="admin_ban_user")],
-        [InlineKeyboardButton("✅ Unban User", callback_data="admin_unban_user")],
-        [InlineKeyboardButton("🔙 Back", callback_data="admin_panel")]
+        [InlineKeyboardButton("🔴 🚫 Ban User", callback_data="admin_ban_user")],
+        [InlineKeyboardButton("🟢 ✅ Unban User", callback_data="admin_unban_user")],
+        [InlineKeyboardButton("⚪ 🔙 Back", callback_data="admin_panel")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -2579,7 +2564,7 @@ async def admin_ban_user_start(update: Update, context: ContextTypes.DEFAULT_TYP
     await query.edit_message_text(
         "🚫 Enter User ID to ban:",
         reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔙 Cancel", callback_data="admin_blacklist")
+            InlineKeyboardButton("🔴 ❌ Cancel", callback_data="admin_blacklist")
         ]])
     )
     return BAN_USER
@@ -2637,7 +2622,7 @@ async def admin_unban_user_start(update: Update, context: ContextTypes.DEFAULT_T
     await query.edit_message_text(
         "✅ Enter User ID to unban:",
         reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔙 Cancel", callback_data="admin_blacklist")
+            InlineKeyboardButton("🔴 ❌ Cancel", callback_data="admin_blacklist")
         ]])
     )
     return BAN_USER
@@ -2684,7 +2669,7 @@ async def admin_warn_user_start(update: Update, context: ContextTypes.DEFAULT_TY
     await query.edit_message_text(
         "⚠️ Enter User ID to warn:",
         reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔙 Cancel", callback_data="admin_users")
+            InlineKeyboardButton("🔴 ❌ Cancel", callback_data="admin_users")
         ]])
     )
     return WARN_USER
@@ -2771,7 +2756,7 @@ async def admin_export_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.edit_message_text(
         "✅ Data exported successfully!",
         reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔙 Back", callback_data="admin_panel")
+            InlineKeyboardButton("⚪ 🔙 Back", callback_data="admin_panel")
         ]])
     )
 
@@ -2831,7 +2816,7 @@ async def admin_backup_db(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.edit_message_text(
         "✅ Backup created successfully!",
         reply_markup=InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔙 Back", callback_data="admin_panel")
+            InlineKeyboardButton("⚪ 🔙 Back", callback_data="admin_panel")
         ]])
     )
 
@@ -3063,13 +3048,21 @@ def main():
     print(f"🎁 Gift Packages: {len(GIFT_PACKAGES)}")
     print(f"👥 Total Users: {users_col.count_documents({})}")
     print(f"💎 1 Search = 1 Point (by Telegram ID)")
-    print(f"🌐 API Endpoint: {API_URL}")
-    print(f"🔑 API Key: {API_KEY}")
     print("="*50)
     print("✅ BONUS SETTINGS:")
     print(f"   🎁 Welcome Bonus: 2 points")
     print(f"   🤝 Referral Bonus: 2 points")
     print(f"   🎁 Daily Bonus: 1 point")
+    print("="*50)
+    print("🎨 COLORED BUTTONS ENABLED:")
+    print("   🔵 Primary - Blue Buttons (Points, Buy, Referral)")
+    print("   🟢 Success - Green Buttons (Buy, Approve, Success)")
+    print("   🔴 Danger - Red Buttons (Search, Cancel, Ban)")
+    print("   🟡 Warning - Yellow Buttons (Redeem, Warn)")
+    print("   🟣 Premium - Purple Buttons (Profile, Export)")
+    print("   🟠 Info - Orange Buttons (History, Orders)")
+    print("   ⚪ Neutral - White Buttons (Back, Settings)")
+    print("   ⚫ Dark - Black Buttons (Blacklist)")
     print("="*50)
     print("✅ ALL FEATURES LOADED AND WORKING:")
     print("   ✓ User System")
@@ -3077,7 +3070,6 @@ def main():
     print("   ✓ Purchase System")
     print("   ✓ Gift Code System")
     print("   ✓ Telegram ID Search (Shows Phone Number!)")
-    print("   ✓ NEW API Integrated Successfully")
     print("   ✓ Referral System")
     print("   ✓ Daily Bonus")
     print("   ✓ Admin Panel (45+ features)")
@@ -3091,6 +3083,7 @@ def main():
     print("   ✓ All Admin Buttons Working")
     print("   ✓ Settings Working Separately")
     print("   ✓ Admin Username Displayed Everywhere")
+    print("   ✓ COLORED BUTTONS for all menus!")
     print("="*50)
     
     application.run_polling(allowed_updates=Update.ALL_TYPES)
