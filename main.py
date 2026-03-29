@@ -3,15 +3,16 @@
 🤖 COMPLETE TELEGRAM BOT - ALL FEATURES WORKING
 ===========================================
 Developer: @VIP_X_OFFICIAL
-Version: 8.1 (FINAL - Updated API)
+Version: 8.2 (FINAL - Added Username Search)
 Features: 100+ Features Working
 Database: MongoDB (IST Timezone)
-Bot Token: 8432105036:AAF_hiRAwU7N2nCVWakv9pjb1zOT4yfc-zk
+Bot Token: 8612834168:AAFT1VX35aEpyEOMoszHf2ymrr2R4iP3gvQ
 Owner ID: 7459756974
 Admin Username: @VIP_X_OFFICIAL
 Welcome Bonus: 2 Points
 Referral Bonus: 2 Points
 Daily Bonus: 1 Point
+New Feature: Username Search (Both Username & ID supported)
 ===========================================
 """
 
@@ -23,6 +24,7 @@ import requests
 import csv
 import os
 import json
+import re
 from datetime import datetime, timedelta
 from pytz import timezone
 from pymongo import MongoClient
@@ -43,9 +45,11 @@ from telegram.constants import ParseMode
 # ==================== CONFIGURATION ====================
 BOT_TOKEN = "8612834168:AAFT1VX35aEpyEOMoszHf2ymrr2R4iP3gvQ"
 MONGODB_URI = "mongodb+srv://nikilsaxena843_db_user:3gF2wyT4IjsFt0cY@vipbot.puv6gfk.mongodb.net/?appName=vipbot"
-# NEW API CONFIGURATION
+# Main API Configuration
 API_URL = "https://api-test-vip-835d081a6316.herokuapp.com/api/search"
-API_KEY = "98577049"  # New API key
+API_KEY = "98577049"
+# Username to UserID API Configuration
+CHAT_ID_API_URL = "https://chat-id-api-be3015f3cfcc.herokuapp.com/get_user"
 OWNER_ID = 7459756974
 OWNER_USERNAME = "@VIP_X_OFFICIAL"
 
@@ -136,7 +140,7 @@ try:
     referral_col.create_index('code', unique=True)
     blacklist_col.create_index('user_id', unique=True)
     
-    # Default settings - UPDATED with new bonus values
+    # Default settings
     if not settings_col.find_one({'key': 'bot_settings'}):
         settings_col.insert_one({
             'key': 'bot_settings',
@@ -146,6 +150,7 @@ try:
             'reactions_enabled': True,
             'api_url': API_URL,
             'api_key': API_KEY,
+            'chat_id_api_url': CHAT_ID_API_URL,
             'point_rate': 5,
             'min_withdraw': 100,
             'referral_bonus': 2,
@@ -154,7 +159,7 @@ try:
             'created_at': datetime.now(IST)
         })
     else:
-        # Update existing settings with new values
+        # Update existing settings
         settings_col.update_one(
             {'key': 'bot_settings'},
             {'$set': {
@@ -162,7 +167,8 @@ try:
                 'daily_bonus': 1,
                 'welcome_bonus': 2,
                 'api_url': API_URL,
-                'api_key': API_KEY
+                'api_key': API_KEY,
+                'chat_id_api_url': CHAT_ID_API_URL
             }}
         )
     
@@ -186,8 +192,9 @@ try:
     print(f"   🤝 Referral Bonus: 2 points")
     print(f"   🎁 Daily Bonus: 1 point")
     print(f"   👑 Admin Username: {OWNER_USERNAME}")
-    print(f"   🌐 NEW API ENDPOINT: {API_URL}")
+    print(f"   🌐 MAIN API: {API_URL}")
     print(f"   🔑 API KEY: {API_KEY}")
+    print(f"   🌐 CHAT ID API: {CHAT_ID_API_URL}")
     print("="*50)
     
 except Exception as e:
@@ -212,11 +219,11 @@ LANG = {
         'insufficient_points': "❌ अपर्याप्त पॉइंट्स! आपके पास {} पॉइंट्स हैं।",
         
         # Search
-        'enter_id': "🆔 Telegram User ID दर्ज करें:\n\nउदाहरण: 7459756974",
-        'invalid_id': "❌ अमान्य ID! केवल numbers दर्ज करें।",
+        'enter_id': "🆔 Telegram User ID या Username दर्ज करें:\n\nउदाहरण: 7459756974 या @username",
+        'invalid_id': "❌ अमान्य ID या Username! सही जानकारी दर्ज करें।",
         'processing': "⏳ प्रोसेसिंग... कृपया प्रतीक्षा करें।",
         'api_error': "❌ API त्रुटि! बाद में प्रयास करें।",
-        'search_result': "✅ सफल!\n\n📱 फोन नंबर: {}\n🆔 Telegram ID: {}\n👤 नाम: {}\n🌍 देश: {}\n📞 कोड: {}\n\n💎 बचे पॉइंट्स: {}\n🕐 समय: {}",
+        'search_result': "✅ सफल!\n\n📱 फोन नंबर: {}\n🆔 Telegram ID: {}\n👤 नाम: {}\n🌍 देश: {}\n📞 कोड: {}\n\n💎 बचे पॉइंट्स: {}\n🕐 समय: {}\n\n👑 एडमिन: {}",
         
         # Gift Codes
         'gift_packages': "🎁 गिफ्ट कोड पैकेज:\nकितने पॉइंट्स का कोड चाहिए?",
@@ -265,11 +272,11 @@ LANG = {
         'insufficient_points': "❌ Insufficient points! You have {} points.",
         
         # Search
-        'enter_id': "🆔 Enter Telegram User ID:\n\nExample: 7459756974",
-        'invalid_id': "❌ Invalid ID! Enter numbers only.",
+        'enter_id': "🆔 Enter Telegram User ID or Username:\n\nExample: 7459756974 or @username",
+        'invalid_id': "❌ Invalid ID or Username! Enter correct information.",
         'processing': "⏳ Processing... Please wait.",
         'api_error': "❌ API Error! Try again later.",
-        'search_result': "✅ Success!\n\n📱 Phone Number: {}\n🆔 Telegram ID: {}\n👤 Name: {}\n🌍 Country: {}\n📞 Code: {}\n\n💎 Remaining Points: {}\n🕐 Time: {}",
+        'search_result': "✅ Success!\n\n📱 Phone Number: {}\n🆔 Telegram ID: {}\n👤 Name: {}\n🌍 Country: {}\n📞 Code: {}\n\n💎 Remaining Points: {}\n🕐 Time: {}\n\n👑 Admin: {}",
         
         # Gift Codes
         'gift_packages': "🎁 Gift Code Packages:\nHow many points code?",
@@ -420,6 +427,93 @@ def generate_referral_code():
     """Generate unique referral code"""
     return 'REF' + ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
 
+def extract_username_from_input(text):
+    """Extract username from input (with or without @)"""
+    text = text.strip()
+    # Remove @ if present at start
+    if text.startswith('@'):
+        return text[1:]
+    return text
+
+def is_username_input(text):
+    """Check if input looks like a username"""
+    text = text.strip()
+    # Username pattern: starts with @ or alphanumeric with underscores, no spaces
+    if text.startswith('@'):
+        return True
+    # Check if it contains only allowed username characters and no spaces
+    if re.match(r'^[a-zA-Z0-9_]{5,32}$', text):
+        return True
+    return False
+
+async def get_user_id_from_username(username):
+    """Get user_id from username using chat-id-api"""
+    try:
+        # Remove @ if present
+        if username.startswith('@'):
+            username = username[1:]
+        
+        response = requests.get(
+            CHAT_ID_API_URL,
+            params={'username': f'@{username}'},
+            timeout=10
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('success') and data.get('data'):
+                user_data = data['data']
+                return {
+                    'user_id': user_data.get('user_id'),
+                    'name': user_data.get('name'),
+                    'username': user_data.get('username'),
+                    'is_bot': user_data.get('is_bot', False)
+                }
+        return None
+    except Exception as e:
+        print(f"Error getting user_id from username: {e}")
+        return None
+
+async def get_phone_number_from_api(user_id):
+    """Get phone number from main API using user_id"""
+    try:
+        response = requests.get(
+            API_URL,
+            params={'key': API_KEY, 'userid': user_id},
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('status') == 'success' and data.get('data'):
+                result_data = data['data']
+                return {
+                    'phone_number': result_data.get('number', 'Not Available'),
+                    'country': result_data.get('country', 'India'),
+                    'country_code': result_data.get('country_code', '+91'),
+                    'found': result_data.get('found', True)
+                }
+        return None
+    except Exception as e:
+        print(f"Error getting phone number: {e}")
+        return None
+
+async def add_reaction(message):
+    """Add random reaction to message"""
+    try:
+        reaction = random.choice(REACTIONS)
+        await message.set_reaction(reaction)
+    except:
+        pass
+
+def clean_api_response(data):
+    """Remove owner info from API response"""
+    if isinstance(data, dict):
+        data.pop('owner', None)
+        if 'data' in data and isinstance(data['data'], dict):
+            data['data'].pop('owner', None)
+    return data
+
 # ==================== USER FUNCTIONS ====================
 async def get_or_create_user(user_id, username=None, first_name=None):
     """Get or create user"""
@@ -566,24 +660,6 @@ async def deduct_points(user_id, points, reason):
     })
     
     return new_balance
-
-async def add_reaction(message):
-    """Add random reaction to message"""
-    try:
-        reaction = random.choice(REACTIONS)
-        await message.set_reaction(reaction)
-    except:
-        pass
-
-def clean_api_response(data):
-    """Remove owner info from API response (for new API format)"""
-    if isinstance(data, dict):
-        # Remove owner field if present
-        data.pop('owner', None)
-        # Also remove if nested in data
-        if 'data' in data and isinstance(data['data'], dict):
-            data['data'].pop('owner', None)
-    return data
 
 # ==================== COMMAND HANDLERS ====================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1069,9 +1145,9 @@ async def admin_reject_payment(update: Update, context: ContextTypes.DEFAULT_TYP
     except:
         pass
 
-# ==================== SMS SERVICE ====================
+# ==================== SEARCH SERVICE (UPDATED WITH USERNAME SUPPORT) ====================
 async def use_service(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Use SMS service - Searches by Telegram ID"""
+    """Use SMS service - Searches by Telegram ID or Username"""
     query = update.callback_query
     await query.answer()
     
@@ -1101,75 +1177,77 @@ async def use_service(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return SEARCH_ID
 
 async def handle_search_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle Telegram ID input for search using new API"""
+    """Handle Telegram ID or Username input for search"""
     user_id = update.effective_user.id
     lang = get_user_lang(user_id)
-    target_id = update.message.text.strip()
+    input_text = update.message.text.strip()
     
-    # Validate ID (should be numeric)
-    if not target_id.isdigit():
-        await update.message.reply_text(LANG[lang]['invalid_id'])
-        return SEARCH_ID
-    
-    target_id = int(target_id)
-    
-    # Check points
+    # Check points first
     user = users_col.find_one({'user_id': user_id})
     if user.get('points', 0) < 1:
         await update.message.reply_text(LANG[lang]['insufficient_points'].format(user.get('points', 0)))
         return ConversationHandler.END
     
-    # Processing
     processing = await update.message.reply_text(LANG[lang]['processing'])
     
+    target_user_id = None
+    target_name_from_api = None
+    target_username = None
+    
+    # Check if input is username or numeric ID
+    if input_text.isdigit():
+        # It's a numeric ID
+        target_user_id = int(input_text)
+    elif is_username_input(input_text):
+        # It's a username, get user_id from chat-id-api
+        clean_username = extract_username_from_input(input_text)
+        
+        # Call chat-id-api to get user_id
+        user_info = await get_user_id_from_username(clean_username)
+        
+        if user_info and user_info.get('user_id'):
+            target_user_id = user_info['user_id']
+            target_name_from_api = user_info.get('name')
+            target_username = user_info.get('username')
+        else:
+            await processing.edit_text(LANG[lang]['invalid_id'])
+            return SEARCH_ID
+    else:
+        await processing.edit_text(LANG[lang]['invalid_id'])
+        return SEARCH_ID
+    
     try:
-        # NEW API CALL with key and userid parameters
-        api_url = API_URL
-        api_key = API_KEY
+        # Call main API with user_id
+        phone_info = await get_phone_number_from_api(target_user_id)
         
-        response = requests.get(
-            api_url,
-            params={'key': api_key, 'userid': target_id},
-            timeout=30
-        )
-        
-        if response.status_code == 200:
-            data = response.json()
-            data = clean_api_response(data)
-            
+        if phone_info and phone_info.get('found'):
             # Deduct points
-            new_balance = await deduct_points(user_id, 1, f"API Search for ID: {target_id}")
+            new_balance = await deduct_points(user_id, 1, f"Search for ID: {target_user_id}")
             
             if new_balance:
-                # Get target user info if exists
-                target_user = users_col.find_one({'user_id': target_id})
-                target_name = target_user.get('first_name', 'Unknown') if target_user else 'Not Registered'
+                # Get target user info from database
+                target_user = users_col.find_one({'user_id': target_user_id})
                 
-                # Extract data from new API response format
-                # New API response format:
-                # {"code":200,"data":{"country":"India","country_code":"+91","found":true,"number":"8423663857"},"status":"success",...}
-                phone_number = "Not Available"
-                country = "India"
-                country_code = "+91"
+                # Priority for name:
+                # 1. Name from chat-id-api (if username was searched)
+                # 2. Name from database (if user exists in bot)
+                # 3. From main API (if available) - but main API doesn't give name
+                # 4. Default "Unknown"
+                display_name = "Unknown"
                 
-                if data.get('status') == 'success' and data.get('data'):
-                    result_data = data['data']
-                    phone_number = result_data.get('number', 'Not Available')
-                    country = result_data.get('country', 'India')
-                    country_code = result_data.get('country_code', '+91')
-                elif data.get('code') == 200 and data.get('data'):
-                    result_data = data['data']
-                    phone_number = result_data.get('number', 'Not Available')
-                    country = result_data.get('country', 'India')
-                    country_code = result_data.get('country_code', '+91')
+                if target_name_from_api:
+                    display_name = target_name_from_api
+                elif target_user:
+                    display_name = target_user.get('first_name', 'Unknown')
                 
                 # Save to history
                 search_history_col.insert_one({
                     'user_id': user_id,
-                    'target_id': target_id,
-                    'target_name': target_name,
-                    'phone_number': phone_number,
-                    'result': data,
+                    'target_id': target_user_id,
+                    'target_name': display_name,
+                    'target_username': target_username,
+                    'phone_number': phone_info.get('phone_number', 'Not Available'),
+                    'result': phone_info,
                     'timestamp': get_ist()
                 })
                 
@@ -1179,15 +1257,16 @@ async def handle_search_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     {'$inc': {'total_searches': 1}}
                 )
                 
-                # Format result (same format as before)
+                # Format result with admin name at the end
                 msg = LANG[lang]['search_result'].format(
-                    phone_number,
-                    target_id,
-                    target_name,
-                    country,
-                    country_code,
+                    phone_info.get('phone_number', 'Not Available'),
+                    target_user_id,
+                    display_name,
+                    phone_info.get('country', 'India'),
+                    phone_info.get('country_code', '+91'),
                     format_number(new_balance),
-                    format_ist(get_ist())
+                    format_ist(get_ist()),
+                    OWNER_USERNAME  # Added admin username at the end
                 )
                 
                 # Send result
@@ -1508,8 +1587,8 @@ async def show_faq(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"A: Buy Points पर क्लिक करें और पेमेंट करें\n\n"
         f"Q: 1 सर्च में कितने पॉइंट लगते हैं?\n"
         f"A: 1 सर्च = 1 पॉइंट\n\n"
-        f"Q: क्या मैं किसी की Telegram ID search कर सकता हूं?\n"
-        f"A: हां, आप किसी भी Telegram User ID की जानकारी प्राप्त कर सकते हैं\n\n"
+        f"Q: क्या मैं किसी की Telegram ID या Username search कर सकता हूं?\n"
+        f"A: हां, आप Telegram ID (numbers) या Username (@username) दोनों से search कर सकते हैं\n\n"
         f"Q: रेफरल से कितने पॉइंट मिलते हैं?\n"
         f"A: 2 पॉइंट प्रति रेफरल\n\n"
         f"Q: वेलकम बोनस कितने पॉइंट मिलते हैं?\n"
@@ -1686,8 +1765,9 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 🤝 Referral Bonus: 2 Points
 🎁 Daily Bonus: 1 Point
 
-🌐 API Endpoint: {API_URL}
-🔑 API Key: {API_KEY}
+🌐 MAIN API: {API_URL}
+🔑 API KEY: {API_KEY}
+🌐 CHAT ID API: {CHAT_ID_API_URL}
 
 🔧 OPTIONS:
     """
@@ -2355,8 +2435,9 @@ async def admin_settings_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
 🎁 Welcome Bonus: {welcome_bonus} pts
 
 🌐 API Settings:
-📡 API Endpoint: {API_URL}
-🔑 API Key: {API_KEY}
+📡 MAIN API: {API_URL}
+🔑 API KEY: {API_KEY}
+📡 CHAT ID API: {CHAT_ID_API_URL}
 
 📝 Options:
     """
@@ -3062,14 +3143,20 @@ def main():
     print(f"💰 Point Packages: {len(POINT_PACKAGES)}")
     print(f"🎁 Gift Packages: {len(GIFT_PACKAGES)}")
     print(f"👥 Total Users: {users_col.count_documents({})}")
-    print(f"💎 1 Search = 1 Point (by Telegram ID)")
-    print(f"🌐 API Endpoint: {API_URL}")
-    print(f"🔑 API Key: {API_KEY}")
+    print(f"💎 1 Search = 1 Point (by Telegram ID or Username)")
+    print(f"🌐 MAIN API: {API_URL}")
+    print(f"🔑 API KEY: {API_KEY}")
+    print(f"🌐 CHAT ID API: {CHAT_ID_API_URL}")
     print("="*50)
     print("✅ BONUS SETTINGS:")
     print(f"   🎁 Welcome Bonus: 2 points")
     print(f"   🤝 Referral Bonus: 2 points")
     print(f"   🎁 Daily Bonus: 1 point")
+    print("="*50)
+    print("✅ NEW FEATURE ADDED:")
+    print(f"   ✓ Username Search Support")
+    print(f"   ✓ Auto-fetch Name from Chat ID API")
+    print(f"   ✓ Admin Name Displayed in Results")
     print("="*50)
     print("✅ ALL FEATURES LOADED AND WORKING:")
     print("   ✓ User System")
@@ -3077,7 +3164,8 @@ def main():
     print("   ✓ Purchase System")
     print("   ✓ Gift Code System")
     print("   ✓ Telegram ID Search (Shows Phone Number!)")
-    print("   ✓ NEW API Integrated Successfully")
+    print("   ✓ Telegram Username Search (New!)")
+    print("   ✓ Name Fetch from Chat ID API (New!)")
     print("   ✓ Referral System")
     print("   ✓ Daily Bonus")
     print("   ✓ Admin Panel (45+ features)")
