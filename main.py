@@ -49,7 +49,7 @@ MONGODB_URI = "mongodb+srv://nikilsaxena843_db_user:3gF2wyT4IjsFt0cY@vipbot.puv6
 PAYMENT_API_URL = "https://darkxalpha.in/api/create-order"
 PAYMENT_CHECK_URL = "https://darkxalpha.in/api/check-order-status"
 PAYMENT_TOKEN = "281b83999638fcca7c5e753195cd5931"
-PAYMENT_REDIRECT_URL = "https://t.me/vipxofficial_tg_number_bot"
+PAYMENT_REDIRECT_URL = "https://vipxofficial.in/payment-complete"
 WEBHOOK_URL = "https://webhook-2c421d918f3d.herokuapp.com/webhook"
 
 # Main API Configuration
