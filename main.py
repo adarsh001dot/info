@@ -14,6 +14,7 @@ Referral Bonus: 2 Points
 Daily Bonus: 1 Point
 New Feature: Username Search (Both Username & ID supported)
 Payment Gateway: darkxalpha.in Integrated with Webhook
+Webhook URL: https://webhook-2c421d918f3d.herokuapp.com/webhook
 ===========================================
 """
 
@@ -58,21 +59,21 @@ OWNER_USERNAME = "@VIP_X_OFFICIAL"
 PAYMENT_API_TOKEN = "897cdfe5264aafaca31d5612e7a521c2"
 PAYMENT_CREATE_ORDER_URL = "https://darkxalpha.in/api/create-order"
 PAYMENT_CHECK_STATUS_URL = "https://darkxalpha.in/api/check-order-status"
-# Redirect URL after payment (your bot link)
+WEBHOOK_URL = "https://webhook-2c421d918f3d.herokuapp.com/webhook"
 REDIRECT_URL = "https://t.me/vipxofficial_tg_number_bot"  # Apne bot ka username update karein
 
 # India Timezone
 IST = timezone('Asia/Kolkata')
 
-# Point Packages
+# Point Packages - Updated: 5 Points = ₹1 (Price updated)
 POINT_PACKAGES = {
-    "5": {"points": 5, "price": 25, "emoji": "⚡", "popular": False},
-    "10": {"points": 10, "price": 50, "emoji": "💫", "popular": False},
-    "15": {"points": 15, "price": 75, "emoji": "✨", "popular": False},
-    "20": {"points": 20, "price": 100, "emoji": "⭐", "popular": True},
-    "30": {"points": 30, "price": 150, "emoji": "🌟", "popular": False},
-    "50": {"points": 50, "price": 250, "emoji": "💎", "popular": False},
-    "100": {"points": 100, "price": 500, "emoji": "👑", "popular": True},
+    "5": {"points": 5, "price": 1, "emoji": "⚡", "popular": False},
+    "10": {"points": 10, "price": 2, "emoji": "💫", "popular": False},
+    "15": {"points": 15, "price": 3, "emoji": "✨", "popular": False},
+    "20": {"points": 20, "price": 4, "emoji": "⭐", "popular": True},
+    "30": {"points": 30, "price": 6, "emoji": "🌟", "popular": False},
+    "50": {"points": 50, "price": 10, "emoji": "💎", "popular": False},
+    "100": {"points": 100, "price": 20, "emoji": "👑", "popular": True},
 }
 
 # Gift Packages
@@ -89,40 +90,40 @@ GIFT_PACKAGES = {
 # Reactions
 REACTIONS = ["❤️‍🔥", "💀", "😈", "☠️", "💘", "💝", "💕", "💞", "💓", "💗"]
 
-# Conversation States
+# Conversation States - FIXED: Exactly 32 states
 (
-    CONTACT_ADMIN,
-    GENERATE_CODE,
-    ADD_POINTS,
-    REMOVE_POINTS,
-    BROADCAST_MSG,
-    BROADCAST_PHOTO,
-    BROADCAST_VIDEO,
-    ADD_REFERRAL,
-    SEARCH_ID,
-    REDEEM_CODE,
-    BUY_POINTS,
-    USER_SETTINGS,
-    FEEDBACK,
-    REPORT_ISSUE,
-    BAN_USER,
-    WARN_USER,
-    SEARCH_USER,
-    EXPORT_DATA,
-    BACKUP_DB,
-    MAINTENANCE_MODE,
-    FORCE_JOIN,
-    RATE_LIMIT,
-    API_SETTINGS,
-    PACKAGE_SETTINGS,
-    REACTION_SETTINGS,
-    SET_RATE_LIMIT,
-    SET_REFERRAL_BONUS,
-    SET_DAILY_BONUS,
-    ADMIN_REPLY,
-    ENTER_AMOUNT,
-    CHECK_PAYMENT,
-) = range(32)
+    CONTACT_ADMIN,       # 0
+    GENERATE_CODE,       # 1
+    ADD_POINTS,          # 2
+    REMOVE_POINTS,       # 3
+    BROADCAST_MSG,       # 4
+    BROADCAST_PHOTO,     # 5
+    BROADCAST_VIDEO,     # 6
+    ADD_REFERRAL,        # 7
+    SEARCH_ID,           # 8
+    REDEEM_CODE,         # 9
+    BUY_POINTS,          # 10
+    USER_SETTINGS,       # 11
+    FEEDBACK,            # 12
+    REPORT_ISSUE,        # 13
+    BAN_USER,            # 14
+    WARN_USER,           # 15
+    SEARCH_USER,         # 16
+    EXPORT_DATA,         # 17
+    BACKUP_DB,           # 18
+    MAINTENANCE_MODE,    # 19
+    FORCE_JOIN,          # 20
+    RATE_LIMIT,          # 21
+    API_SETTINGS,        # 22
+    PACKAGE_SETTINGS,    # 23
+    REACTION_SETTINGS,   # 24
+    SET_RATE_LIMIT,      # 25
+    SET_REFERRAL_BONUS,  # 26
+    SET_DAILY_BONUS,     # 27
+    ADMIN_REPLY,         # 28
+    ENTER_AMOUNT,        # 29
+    CHECK_PAYMENT,       # 30
+) = range(31)  # FIXED: 31 states (0 to 30)
 
 # ==================== DATABASE CONNECTION ====================
 try:
@@ -161,6 +162,8 @@ try:
             'api_url': API_URL,
             'api_key': API_KEY,
             'chat_id_api_url': CHAT_ID_API_URL,
+            'webhook_url': WEBHOOK_URL,
+            'payment_token': PAYMENT_API_TOKEN,
             'point_rate': 5,
             'min_withdraw': 100,
             'referral_bonus': 2,
@@ -169,7 +172,6 @@ try:
             'created_at': datetime.now(IST)
         })
     else:
-        # Update existing settings
         settings_col.update_one(
             {'key': 'bot_settings'},
             {'$set': {
@@ -178,7 +180,9 @@ try:
                 'welcome_bonus': 2,
                 'api_url': API_URL,
                 'api_key': API_KEY,
-                'chat_id_api_url': CHAT_ID_API_URL
+                'chat_id_api_url': CHAT_ID_API_URL,
+                'webhook_url': WEBHOOK_URL,
+                'payment_token': PAYMENT_API_TOKEN
             }}
         )
     
@@ -208,7 +212,8 @@ try:
     print("="*50)
     print("✅ PAYMENT GATEWAY CONFIGURED:")
     print(f"   💳 Gateway: darkxalpha.in")
-    print(f"   🌐 Webhook: https://webhook-2c421d918f3d.herokuapp.com/webhook")
+    print(f"   🌐 Webhook: {WEBHOOK_URL}")
+    print(f"   💰 5 Points = ₹1 (Updated Pricing)")
     print("="*50)
     
 except Exception as e:
@@ -228,7 +233,7 @@ LANG = {
         'cancel': "❌ रद्द करें",
         
         # Points
-        'check_points': "💰 आपके पॉइंट्स: {}\n\n1 पॉइंट = ₹5\n1 सर्च = 1 पॉइंट",
+        'check_points': "💰 आपके पॉइंट्स: {}\n\n5 पॉइंट्स = ₹1\n1 सर्च = 1 पॉइंट",
         'buy_points': "🛒 पॉइंट्स खरीदें\n\nपैकेज चुनें:",
         'insufficient_points': "❌ अपर्याप्त पॉइंट्स! आपके पास {} पॉइंट्स हैं।",
         
@@ -288,7 +293,7 @@ LANG = {
         'cancel': "❌ Cancel",
         
         # Points
-        'check_points': "💰 Your Points: {}\n\n1 Point = ₹5\n1 Search = 1 Point",
+        'check_points': "💰 Your Points: {}\n\n5 Points = ₹1\n1 Search = 1 Point",
         'buy_points': "🛒 Buy Points\n\nChoose package:",
         'insufficient_points': "❌ Insufficient points! You have {} points.",
         
@@ -348,25 +353,21 @@ async def set_language(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = query.from_user.id
     lang = query.data.split('_')[2]
     
-    # Update database
     users_col.update_one(
         {'user_id': user_id},
         {'$set': {'language': lang}}
     )
     
-    # Get user's name for main menu
     user = users_col.find_one({'user_id': user_id})
     name = user.get('first_name', 'User') if user else 'User'
     points = user.get('points', 0) if user else 0
     searches = user.get('total_searches', 0) if user else 0
     
-    # Confirmation message
     if lang == 'hi':
         text = "✅ भाषा हिंदी में बदल दी गई!"
     else:
         text = "✅ Language changed to English!"
     
-    # Create main menu buttons
     keyboard = [
         [
             InlineKeyboardButton("💰 Points", callback_data="check_points"),
@@ -390,7 +391,6 @@ async def set_language(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
     ]
     
-    # Admin button
     if user_id == OWNER_ID:
         keyboard.append([InlineKeyboardButton("👑 ADMIN PANEL", callback_data="admin_panel")])
     
@@ -530,14 +530,6 @@ async def add_reaction(message):
     except:
         pass
 
-def clean_api_response(data):
-    """Remove owner info from API response"""
-    if isinstance(data, dict):
-        data.pop('owner', None)
-        if 'data' in data and isinstance(data['data'], dict):
-            data['data'].pop('owner', None)
-    return data
-
 # ==================== PAYMENT GATEWAY FUNCTIONS ====================
 async def create_payment_order(user_id, amount, points, remark1=""):
     """Create payment order with darkxalpha.in"""
@@ -545,13 +537,13 @@ async def create_payment_order(user_id, amount, points, remark1=""):
         order_id = generate_order_id()
         
         payload = {
-            'customer_mobile': "9999999999",  # Default mobile
+            'customer_mobile': "9999999999",
             'user_token': PAYMENT_API_TOKEN,
             'amount': str(amount),
             'order_id': order_id,
             'redirect_url': REDIRECT_URL,
-            'remark1': str(user_id),  # Store user_id in remark1
-            'remark2': str(points)    # Store points in remark2
+            'remark1': str(user_id),
+            'remark2': str(points)
         }
         
         response = requests.post(
@@ -1590,14 +1582,12 @@ async def show_faq(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"A: Buy Points पर क्लिक करें और पेमेंट करें\n\n"
         f"Q: 1 सर्च में कितने पॉइंट लगते हैं?\n"
         f"A: 1 सर्च = 1 पॉइंट\n\n"
+        f"Q: 5 पॉइंट्स की कीमत क्या है?\n"
+        f"A: ₹1 (5 पॉइंट्स = ₹1)\n\n"
         f"Q: क्या मैं किसी की Telegram ID या Username search कर सकता हूं?\n"
         f"A: हां, आप Telegram ID (numbers) या Username (@username) दोनों से search कर सकते हैं\n\n"
         f"Q: रेफरल से कितने पॉइंट मिलते हैं?\n"
         f"A: 2 पॉइंट प्रति रेफरल\n\n"
-        f"Q: वेलकम बोनस कितने पॉइंट मिलते हैं?\n"
-        f"A: 2 पॉइंट\n\n"
-        f"Q: डेली बोनस कितने पॉइंट मिलते हैं?\n"
-        f"A: 1 पॉइंट प्रतिदिन\n\n"
         f"Q: पेमेंट वेरिफाई होने में कितना समय?\n"
         f"A: तुरंत (Instant)\n\n"
         f"एडमिन: {OWNER_USERNAME}"
@@ -1764,9 +1754,10 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 🎁 Welcome Bonus: 2 Points
 🤝 Referral Bonus: 2 Points
 🎁 Daily Bonus: 1 Point
+💰 5 Points = ₹1
 
 💳 PAYMENT GATEWAY: darkxalpha.in
-🌐 Webhook: Active ✅
+🌐 Webhook: {WEBHOOK_URL}
 
 🔧 OPTIONS:
     """
@@ -2301,7 +2292,6 @@ async def admin_orders_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     pending = orders_col.count_documents({'status': 'pending'})
     processing = orders_col.count_documents({'status': 'processing'})
     completed = orders_col.count_documents({'status': 'completed'})
-    rejected = orders_col.count_documents({'status': 'rejected'})
     failed = orders_col.count_documents({'status': 'failed'})
     
     msg = f"""
@@ -2312,8 +2302,7 @@ async def admin_orders_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 ⏳ Pending: {pending}
 ⚙️ Processing: {processing}
 ✅ Completed: {completed}
-❌ Rejected: {rejected}
-⚠️ Failed: {failed}
+❌ Failed: {failed}
 
 Choose option:
     """
@@ -2410,7 +2399,7 @@ async def admin_failed_orders(update: Update, context: ContextTypes.DEFAULT_TYPE
     if query.from_user.id != OWNER_ID:
         return
     
-    orders = list(orders_col.find({'status': {'$in': ['failed', 'rejected']}}).sort('created_at', -1).limit(10))
+    orders = list(orders_col.find({'status': 'failed'}).sort('created_at', -1).limit(10))
     
     if not orders:
         await query.edit_message_text(
@@ -2421,14 +2410,12 @@ async def admin_failed_orders(update: Update, context: ContextTypes.DEFAULT_TYPE
         )
         return
     
-    msg = "❌ Failed/Rejected Orders:\n\n"
+    msg = "❌ Failed Orders:\n\n"
     for order in orders:
-        status_emoji = "❌" if order['status'] == 'failed' else "🚫"
-        msg += f"{status_emoji} Order: {order['order_id']}\n"
+        msg += f"❌ Order: {order['order_id']}\n"
         msg += f"   User: {order['user_id']}\n"
         msg += f"   Points: {order['points']}\n"
         msg += f"   Amount: ₹{order['amount']}\n"
-        msg += f"   Status: {order['status']}\n"
         msg += f"   Time: {format_ist(order['created_at'])}\n\n"
     
     keyboard = [[InlineKeyboardButton("🔙 Back", callback_data="admin_orders")]]
@@ -2476,7 +2463,7 @@ async def admin_settings_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
 
 💳 Payment Gateway:
 📡 API: darkxalpha.in
-🌐 Webhook: Active ✅
+🌐 Webhook: {WEBHOOK_URL}
 
 📝 Options:
     """
@@ -3163,6 +3150,7 @@ def main():
     print(f"🎁 Gift Packages: {len(GIFT_PACKAGES)}")
     print(f"👥 Total Users: {users_col.count_documents({})}")
     print(f"💎 1 Search = 1 Point")
+    print(f"💰 5 Points = ₹1 (New Pricing)")
     print(f"🌐 MAIN API: {API_URL}")
     print(f"🔑 API KEY: {API_KEY}")
     print(f"🌐 CHAT ID API: {CHAT_ID_API_URL}")
@@ -3174,7 +3162,7 @@ def main():
     print("="*50)
     print("✅ PAYMENT GATEWAY INTEGRATED:")
     print(f"   💳 Gateway: darkxalpha.in")
-    print(f"   🌐 Webhook: https://webhook-2c421d918f3d.herokuapp.com/webhook")
+    print(f"   🌐 Webhook: {WEBHOOK_URL}")
     print(f"   ✅ Auto Point Addition on Payment Success")
     print(f"   ✅ Webhook + Manual Check Both Working")
     print("="*50)
