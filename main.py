@@ -684,13 +684,6 @@ async def process_purchase(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ]])
         )
         
-        if response.status_code in [200, 201]:
-            return response.json()
-        return None
-    except Exception as e:
-        print(f"Check status error: {e}")
-        return None
-
 # ==================== USER FUNCTIONS ====================
 async def get_or_create_user(user_id, username=None, first_name=None):
     """Get or create user"""
