@@ -534,7 +534,7 @@ def clean_api_response(data):
             data['data'].pop('owner', None)
     return data
 
-# ==================== PAYMENT FUNCTIONS (FIXED - HTTP 201) ====================
+# ==================== PAYMENT FUNCTIONS (FIXED - WITH AUTO DELETE) ====================
 def create_payment_order(user_id, amount, points, order_id):
     """Create payment order with DarkXAlpha API - FIXED for HTTP 201"""
     try:
@@ -594,18 +594,94 @@ def create_payment_order(user_id, amount, points, order_id):
         print(f"Payment API Error: {e}")
         return {'success': False, 'error': str(e)}
 
-def check_payment_status(order_id):
-    """Check payment status from DarkXAlpha API"""
-    try:
-        payload = {
-            'user_token': PAYMENT_TOKEN,
-            'order_id': order_id
-        }
+
+async def process_purchase(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Process point purchase with DarkXAlpha payment gateway - WITH AUTO DELETE"""
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = query.from_user.id
+    lang = get_user_lang(user_id)
+    
+    parts = query.data.split('_')
+    points = int(parts[2])
+    amount = int(parts[3])
+    
+    # Check for existing pending order
+    existing_order = orders_col.find_one({
+        'user_id': user_id,
+        'points': points,
+        'status': 'pending'
+    })
+    
+    if existing_order:
+        payment_url = existing_order.get('payment_url')
+        order_id = existing_order.get('order_id')
         
-        response = requests.post(
-            PAYMENT_CHECK_URL,
-            data=payload,
-            timeout=15
+        keyboard = [
+            [InlineKeyboardButton("💳 CONTINUE PAYMENT 💳", url=payment_url)],
+            [InlineKeyboardButton("🔄 Check Payment Status", callback_data=f"check_payment_{order_id}")],
+            [InlineKeyboardButton(LANG[lang]['back'], callback_data="buy_points")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(
+            f"⏳ You already have a pending order!\n\nOrder ID: {order_id}\nPoints: {points}\nAmount: ₹{amount}\n\nContinue with your existing payment:",
+            reply_markup=reply_markup
+        )
+        return
+    
+    # Create order in database
+    order_id = generate_order_id()
+    orders_col.insert_one({
+        'order_id': order_id,
+        'user_id': user_id,
+        'points': points,
+        'amount': amount,
+        'status': 'pending',
+        'payment_method': 'darkxalpha',
+        'created_at': get_ist()
+    })
+    
+    # Send processing message
+    processing_msg = await query.edit_message_text(LANG[lang]['payment_processing'])
+    
+    # Create payment order with DarkXAlpha API
+    payment_result = create_payment_order(user_id, amount, points, order_id)
+    
+    if payment_result.get('success') and payment_result.get('payment_url'):
+        payment_url = payment_result['payment_url']
+        api_order_id = payment_result.get('order_id', order_id)
+        
+        # Update order with API order ID and store message ID for auto-delete
+        orders_col.update_one(
+            {'order_id': order_id},
+            {'$set': {
+                'api_order_id': api_order_id, 
+                'payment_url': payment_url,
+                'payment_message_id': processing_msg.message_id  # STORE MESSAGE ID FOR AUTO DELETE
+            }}
+        )
+        
+        # Send payment link with button
+        keyboard = [
+            [InlineKeyboardButton("💳 CLICK TO PAY 💳", url=payment_url)],
+            [InlineKeyboardButton("🔄 Check Payment Status", callback_data=f"check_payment_{order_id}")],
+            [InlineKeyboardButton(LANG[lang]['back'], callback_data="buy_points")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await processing_msg.edit_text(
+            LANG[lang]['payment_link'].format(points, amount),
+            reply_markup=reply_markup
+        )
+    else:
+        error_msg = payment_result.get('error', 'Unknown error')
+        await processing_msg.edit_text(
+            LANG[lang]['payment_failed'].format(error_msg),
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton(LANG[lang]['back'], callback_data="buy_points")
+            ]])
         )
         
         if response.status_code in [200, 201]:
