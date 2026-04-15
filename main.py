@@ -47,7 +47,7 @@ MONGODB_URI = "mongodb+srv://nikilsaxena843_db_user:3gF2wyT4IjsFt0cY@vipbot.puv6
 # DarkXAlpha Payment Gateway Configuration
 PAYMENT_API_URL = "https://darkxalpha.in/api/create-order"
 PAYMENT_CHECK_URL = "https://darkxalpha.in/api/check-order-status"
-PAYMENT_TOKEN = "897cdfe5264aafaca31d5612e7a521c2"
+PAYMENT_TOKEN = "281b83999638fcca7c5e753195cd5931"
 PAYMENT_REDIRECT_URL = "https://t.me/vipxofficial_tg_number_bot"  # Replace with your domain
 WEBHOOK_URL = "https://webhook-2c421d918f3d.herokuapp.com/webhook"  # Replace with your webhook URL
 
