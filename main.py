@@ -3,7 +3,7 @@
 🤖 COMPLETE TELEGRAM BOT - ALL FEATURES WORKING
 ===========================================
 Developer: @VIP_X_OFFICIAL
-Version: 8.2 (FINAL - Added Username Search)
+Version: 9.0 (Payment Gateway Integrated)
 Features: 100+ Features Working
 Database: MongoDB (IST Timezone)
 Bot Token: 8612834168:AAFT1VX35aEpyEOMoszHf2ymrr2R4iP3gvQ
@@ -13,6 +13,7 @@ Welcome Bonus: 2 Points
 Referral Bonus: 2 Points
 Daily Bonus: 1 Point
 New Feature: Username Search (Both Username & ID supported)
+Payment Gateway: darkxalpha.in Integrated with Webhook
 ===========================================
 """
 
@@ -52,6 +53,13 @@ API_KEY = "98577049"
 CHAT_ID_API_URL = "https://chat-id-api-be3015f3cfcc.herokuapp.com/get_user"
 OWNER_ID = 7459756974
 OWNER_USERNAME = "@VIP_X_OFFICIAL"
+
+# ==================== PAYMENT GATEWAY CONFIGURATION ====================
+PAYMENT_API_TOKEN = "897cdfe5264aafaca31d5612e7a521c2"
+PAYMENT_CREATE_ORDER_URL = "https://darkxalpha.in/api/create-order"
+PAYMENT_CHECK_STATUS_URL = "https://darkxalpha.in/api/check-order-status"
+# Redirect URL after payment (your bot link)
+REDIRECT_URL = "https://t.me/vipxofficial_tg_number_bot"  # Apne bot ka username update karein
 
 # India Timezone
 IST = timezone('Asia/Kolkata')
@@ -112,7 +120,9 @@ REACTIONS = ["❤️‍🔥", "💀", "😈", "☠️", "💘", "💝", "💕", 
     SET_REFERRAL_BONUS,
     SET_DAILY_BONUS,
     ADMIN_REPLY,
-) = range(29)
+    ENTER_AMOUNT,
+    CHECK_PAYMENT,
+) = range(32)
 
 # ==================== DATABASE CONNECTION ====================
 try:
@@ -196,6 +206,10 @@ try:
     print(f"   🔑 API KEY: {API_KEY}")
     print(f"   🌐 CHAT ID API: {CHAT_ID_API_URL}")
     print("="*50)
+    print("✅ PAYMENT GATEWAY CONFIGURED:")
+    print(f"   💳 Gateway: darkxalpha.in")
+    print(f"   🌐 Webhook: https://webhook-2c421d918f3d.herokuapp.com/webhook")
+    print("="*50)
     
 except Exception as e:
     print(f"❌ DATABASE ERROR: {e}")
@@ -255,6 +269,13 @@ LANG = {
         
         # Help
         'help_text': "❓ मदद\n\n/start - शुरू करें\n/profile - प्रोफाइल\n/points - पॉइंट्स\n/buy - खरीदें\n/redeem - कोड रिडीम\n/referral - रेफरल\n/history - हिस्ट्री\n/settings - सेटिंग्स\n/help - मदद\n\nएडमिन: {}",
+        
+        # Payment
+        'payment_method': "💳 भुगतान विधि चुनें:",
+        'payment_url': "🔗 भुगतान लिंक:\n\n{}\n\nलिंक पर क्लिक करें और भुगतान पूरा करें।\nभुगतान के बाद, 'चेक पेमेंट' बटन दबाएं।",
+        'payment_pending': "⏳ आपका भुगतान लंबित है। कृपया भुगतान पूरा करें।",
+        'payment_success': "✅ भुगतान सफल!\n\n🆔 ऑर्डर: {}\n💰 पॉइंट्स: {}\n💎 नया बैलेंस: {}",
+        'payment_failed': "❌ भुगतान विफल!\n\nकृपया पुनः प्रयास करें।",
     },
     'en': {
         # Basic
@@ -308,6 +329,13 @@ LANG = {
         
         # Help
         'help_text': "❓ Help\n\n/start - Start bot\n/profile - View profile\n/points - Check points\n/buy - Buy points\n/redeem - Redeem code\n/referral - Referral system\n/history - Search history\n/settings - Settings\n/help - This help\n\nAdmin: {}",
+        
+        # Payment
+        'payment_method': "💳 Select Payment Method:",
+        'payment_url': "🔗 Payment Link:\n\n{}\n\nClick the link and complete payment.\nAfter payment, press 'Check Payment' button.",
+        'payment_pending': "⏳ Your payment is pending. Please complete the payment.",
+        'payment_success': "✅ Payment Successful!\n\n🆔 Order: {}\n💰 Points: {}\n💎 New Balance: {}",
+        'payment_failed': "❌ Payment Failed!\n\nPlease try again.",
     }
 }
 
@@ -421,7 +449,7 @@ def generate_code(prefix=""):
 
 def generate_order_id():
     """Generate unique order ID"""
-    return f"ORD{datetime.now(IST).strftime('%Y%m%d%H%M%S')}{random.randint(100,999)}"
+    return f"{datetime.now(IST).strftime('%Y%m%d%H%M%S')}{random.randint(1000,9999)}"
 
 def generate_referral_code():
     """Generate unique referral code"""
@@ -430,7 +458,6 @@ def generate_referral_code():
 def extract_username_from_input(text):
     """Extract username from input (with or without @)"""
     text = text.strip()
-    # Remove @ if present at start
     if text.startswith('@'):
         return text[1:]
     return text
@@ -438,10 +465,8 @@ def extract_username_from_input(text):
 def is_username_input(text):
     """Check if input looks like a username"""
     text = text.strip()
-    # Username pattern: starts with @ or alphanumeric with underscores, no spaces
     if text.startswith('@'):
         return True
-    # Check if it contains only allowed username characters and no spaces
     if re.match(r'^[a-zA-Z0-9_]{5,32}$', text):
         return True
     return False
@@ -449,7 +474,6 @@ def is_username_input(text):
 async def get_user_id_from_username(username):
     """Get user_id from username using chat-id-api"""
     try:
-        # Remove @ if present
         if username.startswith('@'):
             username = username[1:]
         
@@ -514,16 +538,75 @@ def clean_api_response(data):
             data['data'].pop('owner', None)
     return data
 
+# ==================== PAYMENT GATEWAY FUNCTIONS ====================
+async def create_payment_order(user_id, amount, points, remark1=""):
+    """Create payment order with darkxalpha.in"""
+    try:
+        order_id = generate_order_id()
+        
+        payload = {
+            'customer_mobile': "9999999999",  # Default mobile
+            'user_token': PAYMENT_API_TOKEN,
+            'amount': str(amount),
+            'order_id': order_id,
+            'redirect_url': REDIRECT_URL,
+            'remark1': str(user_id),  # Store user_id in remark1
+            'remark2': str(points)    # Store points in remark2
+        }
+        
+        response = requests.post(
+            PAYMENT_CREATE_ORDER_URL,
+            data=payload,
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('status') == True:
+                return {
+                    'success': True,
+                    'order_id': order_id,
+                    'payment_url': data['result']['payment_url'],
+                    'api_order_id': data['result']['orderId']
+                }
+        
+        return {'success': False, 'error': 'Failed to create order'}
+        
+    except Exception as e:
+        print(f"Payment Error: {e}")
+        return {'success': False, 'error': str(e)}
+
+async def check_payment_status(order_id):
+    """Check payment status from darkxalpha.in"""
+    try:
+        payload = {
+            'user_token': PAYMENT_API_TOKEN,
+            'order_id': order_id
+        }
+        
+        response = requests.post(
+            PAYMENT_CHECK_STATUS_URL,
+            data=payload,
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            return data
+        return None
+        
+    except Exception as e:
+        print(f"Check Payment Error: {e}")
+        return None
+
 # ==================== USER FUNCTIONS ====================
 async def get_or_create_user(user_id, username=None, first_name=None):
     """Get or create user"""
     user = users_col.find_one({'user_id': user_id})
     
     if not user:
-        # Create referral code
         ref_code = generate_referral_code()
         
-        # Create user
         user_data = {
             'user_id': user_id,
             'username': username,
@@ -548,7 +631,6 @@ async def get_or_create_user(user_id, username=None, first_name=None):
         }
         users_col.insert_one(user_data)
         
-        # Add referral code to referral collection
         try:
             referral_col.insert_one({
                 'code': ref_code,
@@ -557,7 +639,6 @@ async def get_or_create_user(user_id, username=None, first_name=None):
                 'used_by': []
             })
         except:
-            # If duplicate, generate new one
             ref_code = generate_referral_code() + '2'
             referral_col.insert_one({
                 'code': ref_code,
@@ -570,14 +651,12 @@ async def get_or_create_user(user_id, username=None, first_name=None):
                 {'$set': {'referral_code': ref_code}}
             )
         
-        # Welcome bonus
         settings = settings_col.find_one({'key': 'bot_settings'})
         welcome_bonus = settings.get('welcome_bonus', 2) if settings else 2
         await add_points(user_id, welcome_bonus, "Welcome bonus")
         
         return user_data
     
-    # Update last active
     users_col.update_one(
         {'user_id': user_id},
         {'$set': {'last_active': get_ist(), 'username': username, 'first_name': first_name}}
@@ -596,7 +675,6 @@ async def add_points(user_id, points, reason, admin_id=None):
         {'$set': {'points': new_balance}}
     )
     
-    # Log transaction
     transactions_col.insert_one({
         'user_id': user_id,
         'type': 'credit',
@@ -624,7 +702,6 @@ async def remove_points(user_id, points, reason, admin_id=None):
         {'$set': {'points': new_balance}}
     )
     
-    # Log transaction
     transactions_col.insert_one({
         'user_id': user_id,
         'type': 'debit',
@@ -649,7 +726,6 @@ async def deduct_points(user_id, points, reason):
         {'$set': {'points': new_balance}}
     )
     
-    # Log transaction
     transactions_col.insert_one({
         'user_id': user_id,
         'type': 'debit',
@@ -667,52 +743,44 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     args = context.args
     
-    # Check if user is banned
     banned = blacklist_col.find_one({'user_id': user_id})
     if banned:
         await update.message.reply_text("❌ आप ब्लैकलिस्ट कर दिए गए हैं!\nYou have been blacklisted!")
         return
     
-    # Check referral
     if args and args[0].startswith('ref_'):
         ref_code = args[0][4:]
         referrer = referral_col.find_one({'code': ref_code})
         if referrer and referrer['user_id'] != user_id:
             context.user_data['referred_by'] = referrer['user_id']
     
-    # Get or create user
     user = await get_or_create_user(
         user_id,
         update.effective_user.username,
         update.effective_user.first_name
     )
     
-    # Handle referral
     if context.user_data.get('referred_by') and not user.get('referred_by'):
         referrer_id = context.user_data['referred_by']
         settings = settings_col.find_one({'key': 'bot_settings'})
         bonus = settings.get('referral_bonus', 2) if settings else 2
         
-        # Update referrer
         await add_points(referrer_id, bonus, f"Referral bonus for user {user_id}")
         users_col.update_one(
             {'user_id': referrer_id},
             {'$inc': {'total_referrals': 1}}
         )
         
-        # Update referral collection
         referral_col.update_one(
             {'user_id': referrer_id},
             {'$push': {'used_by': user_id}}
         )
         
-        # Update user
         users_col.update_one(
             {'user_id': user_id},
             {'$set': {'referred_by': referrer_id}}
         )
         
-        # Notify referrer
         try:
             await context.bot.send_message(
                 referrer_id,
@@ -721,7 +789,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except:
             pass
     
-    # Language selection
     keyboard = [
         [InlineKeyboardButton("🇮🇳 हिंदी", callback_data="lang_hi"),
          InlineKeyboardButton("🇬🇧 English", callback_data="lang_en")]
@@ -750,7 +817,6 @@ async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     name = user.get('first_name', 'User')
     lang = get_user_lang(user_id)
     
-    # Main menu buttons
     keyboard = [
         [
             InlineKeyboardButton("💰 Points", callback_data="check_points"),
@@ -774,7 +840,6 @@ async def main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
     ]
     
-    # Admin button
     if user_id == OWNER_ID:
         keyboard.append([InlineKeyboardButton("👑 ADMIN PANEL", callback_data="admin_panel")])
     
@@ -800,9 +865,6 @@ async def view_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     join_date = format_ist(user.get('joined_date', get_ist()))
-    
-    # Get stats
-    transactions = transactions_col.count_documents({'user_id': user_id})
     referrals = user.get('total_referrals', 0)
     
     profile_text = LANG[lang]['profile'].format(
@@ -930,7 +992,7 @@ async def buy_points_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def process_purchase(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Process point purchase"""
+    """Process point purchase with payment gateway"""
     query = update.callback_query
     await query.answer()
     
@@ -938,214 +1000,183 @@ async def process_purchase(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = get_user_lang(user_id)
     points = int(query.data.split('_')[2])
     
-    # Create order
-    order_id = generate_order_id()
+    # Find package price
+    price = None
+    for key, package in POINT_PACKAGES.items():
+        if package['points'] == points:
+            price = package['price']
+            break
+    
+    if not price:
+        await query.edit_message_text("❌ Invalid package!")
+        return
+    
+    # Create payment order
+    payment_result = await create_payment_order(user_id, price, points)
+    
+    if not payment_result['success']:
+        await query.edit_message_text(
+            f"❌ Payment gateway error!\nPlease try again later.",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton(LANG[lang]['back'], callback_data="buy_points")
+            ]])
+        )
+        return
+    
+    # Save order to database
     orders_col.insert_one({
-        'order_id': order_id,
+        'order_id': payment_result['order_id'],
+        'api_order_id': payment_result['api_order_id'],
         'user_id': user_id,
         'points': points,
-        'amount': points * 5,
+        'amount': price,
         'status': 'pending',
-        'payment_method': None,
+        'payment_method': 'gateway',
+        'payment_url': payment_result['payment_url'],
         'created_at': get_ist()
     })
     
-    # Payment options
+    # Store current order in context
+    context.user_data['current_order'] = payment_result['order_id']
+    context.user_data['current_points'] = points
+    
+    # Show payment link
     keyboard = [
-        [InlineKeyboardButton("💳 Razorpay", callback_data=f"pay_razor_{order_id}")],
-        [InlineKeyboardButton("📲 PhonePe", callback_data=f"pay_phonepe_{order_id}")],
-        [InlineKeyboardButton("🧾 Google Pay", callback_data=f"pay_gpay_{order_id}")],
+        [InlineKeyboardButton("💳 Pay Now", url=payment_result['payment_url'])],
+        [InlineKeyboardButton("✅ Check Payment", callback_data=f"check_payment_{payment_result['order_id']}")],
         [InlineKeyboardButton("❌ Cancel", callback_data="buy_points")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
+    payment_text = f"""
+🛒 **Order Created!**
+
+📦 Package: {points} Points
+💰 Amount: ₹{price}
+🆔 Order ID: `{payment_result['order_id']}`
+
+🔗 **Payment Link:** 
+{payment_result['payment_url']}
+
+📌 **Instructions:**
+1️⃣ Click "Pay Now" button
+2️⃣ Complete payment on the page
+3️⃣ Return here and click "Check Payment"
+4️⃣ Points will be added automatically!
+
+⚠️ Link expires in 30 minutes.
+👑 Admin: {OWNER_USERNAME}
+    """
+    
     await query.edit_message_text(
-        f"🛒 Order #{order_id}\n\n"
-        f"📦 Package: {points} Points\n"
-        f"💰 Amount: ₹{points * 5}\n\n"
-        f"Select payment method:",
-        reply_markup=reply_markup
+        payment_text,
+        reply_markup=reply_markup,
+        parse_mode=ParseMode.MARKDOWN
     )
 
-async def process_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Process payment"""
+async def check_payment_status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Check payment status"""
     query = update.callback_query
     await query.answer()
     
     user_id = query.from_user.id
-    data = query.data.split('_')
-    method = data[1]
-    order_id = data[2]
+    lang = get_user_lang(user_id)
+    order_id = query.data.split('_')[2]
     
+    # Check order in database
     order = orders_col.find_one({'order_id': order_id, 'user_id': user_id})
     if not order:
         await query.edit_message_text("❌ Order not found!")
         return
     
-    # Update order
-    orders_col.update_one(
-        {'order_id': order_id},
-        {'$set': {
-            'payment_method': method,
-            'status': 'processing'
-        }}
-    )
+    # If already completed
+    if order.get('status') == 'completed':
+        await query.edit_message_text(
+            LANG[lang]['payment_success'].format(
+                order_id,
+                order['points'],
+                format_number(users_col.find_one({'user_id': user_id})['points'])
+            ),
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🏠 Main Menu", callback_data="back_to_menu")
+            ]])
+        )
+        return
     
-    # Payment instructions
-    upi_id = "nanhin.3@ptaxis"
+    # Check payment status from API
+    status_result = await check_payment_status(order['api_order_id'])
     
-    if method == "razor":
-        instructions = f"🔴 RAZORPAY PAYMENT\n\n"
-    elif method == "phonepe":
-        instructions = f"🔵 PHONEPE PAYMENT\n\n"
+    if status_result and status_result.get('status') == 'COMPLETED':
+        # Update order status
+        orders_col.update_one(
+            {'order_id': order_id},
+            {'$set': {
+                'status': 'completed',
+                'completed_at': get_ist(),
+                'utr': status_result.get('result', {}).get('utr', '')
+            }}
+        )
+        
+        # Add points to user
+        new_balance = await add_points(user_id, order['points'], f"Payment for order {order_id}")
+        
+        await query.edit_message_text(
+            LANG[lang]['payment_success'].format(
+                order_id,
+                order['points'],
+                format_number(new_balance)
+            ),
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🏠 Main Menu", callback_data="back_to_menu")
+            ]])
+        )
+        
+        # Notify admin
+        try:
+            await context.bot.send_message(
+                OWNER_ID,
+                f"💰 Payment Received!\n\n"
+                f"Order: {order_id}\n"
+                f"User: {user_id}\n"
+                f"Points: {order['points']}\n"
+                f"Amount: ₹{order['amount']}\n"
+                f"UTR: {status_result.get('result', {}).get('utr', 'N/A')}"
+            )
+        except:
+            pass
+            
+    elif status_result and status_result.get('status') == 'ERROR':
+        orders_col.update_one(
+            {'order_id': order_id},
+            {'$set': {'status': 'failed', 'failed_at': get_ist()}}
+        )
+        
+        await query.edit_message_text(
+            LANG[lang]['payment_failed'],
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🛒 Try Again", callback_data="buy_points"),
+                InlineKeyboardButton("🏠 Main Menu", callback_data="back_to_menu")
+            ]])
+        )
     else:
-        instructions = f"🟢 GPAY PAYMENT\n\n"
-    
-    instructions += (
-        f"Order: {order_id}\n"
-        f"Amount: ₹{order['amount']}\n"
-        f"UPI ID: {upi_id}\n\n"
-        f"Steps:\n"
-        f"1️⃣ Open {method.upper()} app\n"
-        f"2️⃣ Pay to: {upi_id}\n"
-        f"3️⃣ Send payment screenshot to admin {OWNER_USERNAME}\n"
-        f"4️⃣ Click 'I Paid' button\n\n"
-        f"⚠️ Payment verify होने पर पॉइंट्स automatically मिल जाएंगे!"
-    )
-    
-    keyboard = [
-        [InlineKeyboardButton("✅ I PAID", callback_data=f"verify_pay_{order_id}")],
-        [InlineKeyboardButton("❌ Cancel", callback_data="buy_points")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await query.edit_message_text(
-        instructions,
-        reply_markup=reply_markup
-    )
-
-async def verify_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Verify payment"""
-    query = update.callback_query
-    await query.answer()
-    
-    user_id = query.from_user.id
-    order_id = query.data.split('_')[2]
-    
-    order = orders_col.find_one({'order_id': order_id, 'user_id': user_id})
-    if not order:
-        await query.edit_message_text("❌ Order not found!")
-        return
-    
-    # Notify admin
-    admin_msg = (
-        f"💰 PAYMENT VERIFICATION REQUIRED\n\n"
-        f"Order: {order_id}\n"
-        f"User: {user_id}\n"
-        f"Points: {order['points']}\n"
-        f"Amount: ₹{order['amount']}\n"
-        f"Method: {order['payment_method']}\n\n"
-        f"Verify and add points!"
-    )
-    
-    keyboard = [
-        [InlineKeyboardButton("✅ Approve", callback_data=f"admin_approve_{order_id}")],
-        [InlineKeyboardButton("❌ Reject", callback_data=f"admin_reject_{order_id}")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await context.bot.send_message(OWNER_ID, admin_msg, reply_markup=reply_markup)
-    
-    await query.edit_message_text(
-        f"✅ Payment notification sent to admin {OWNER_USERNAME}!\n"
-        "Points will be added after verification."
-    )
-
-async def admin_approve_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Admin approve payment"""
-    query = update.callback_query
-    await query.answer()
-    
-    if query.from_user.id != OWNER_ID:
-        await query.edit_message_text("❌ Unauthorized!")
-        return
-    
-    order_id = query.data.split('_')[2]
-    
-    order = orders_col.find_one({'order_id': order_id})
-    if not order:
-        await query.edit_message_text("❌ Order not found!")
-        return
-    
-    # Add points to user
-    new_balance = await add_points(order['user_id'], order['points'], f"Payment approved for order {order_id}", OWNER_ID)
-    
-    # Update order status
-    orders_col.update_one(
-        {'order_id': order_id},
-        {'$set': {'status': 'completed', 'approved_at': get_ist(), 'approved_by': OWNER_ID}}
-    )
-    
-    await query.edit_message_text(
-        f"✅ Payment Approved!\n\n"
-        f"Order: {order_id}\n"
-        f"User: {order['user_id']}\n"
-        f"Points Added: {order['points']}\n"
-        f"New Balance: {format_number(new_balance)}"
-    )
-    
-    # Notify user
-    try:
-        lang = get_user_lang(order['user_id'])
-        await context.bot.send_message(
-            order['user_id'],
-            f"✅ Payment Approved!\n\n"
-            f"Your payment of ₹{order['amount']} has been verified.\n"
-            f"{order['points']} points added to your account.\n"
-            f"New Balance: {format_number(new_balance)}"
+        # Still pending
+        keyboard = [
+            [InlineKeyboardButton("💳 Pay Now", url=order['payment_url'])],
+            [InlineKeyboardButton("🔄 Check Again", callback_data=f"check_payment_{order_id}")],
+            [InlineKeyboardButton("❌ Cancel", callback_data="buy_points")]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(
+            f"⏳ Payment Pending\n\n"
+            f"Order: `{order_id}`\n"
+            f"Amount: ₹{order['amount']}\n\n"
+            f"Please complete the payment and check again.",
+            reply_markup=reply_markup,
+            parse_mode=ParseMode.MARKDOWN
         )
-    except:
-        pass
 
-async def admin_reject_payment(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Admin reject payment"""
-    query = update.callback_query
-    await query.answer()
-    
-    if query.from_user.id != OWNER_ID:
-        return
-    
-    order_id = query.data.split('_')[2]
-    
-    order = orders_col.find_one({'order_id': order_id})
-    if not order:
-        await query.edit_message_text("❌ Order not found!")
-        return
-    
-    # Update order status
-    orders_col.update_one(
-        {'order_id': order_id},
-        {'$set': {'status': 'rejected', 'rejected_at': get_ist(), 'rejected_by': OWNER_ID}}
-    )
-    
-    await query.edit_message_text(
-        f"❌ Payment Rejected!\n\n"
-        f"Order: {order_id}\n"
-        f"User: {order['user_id']}"
-    )
-    
-    # Notify user
-    try:
-        await context.bot.send_message(
-            order['user_id'],
-            f"❌ Payment Rejected!\n\n"
-            f"Your payment of ₹{order['amount']} could not be verified.\n"
-            f"Please contact admin {OWNER_USERNAME} for more information."
-        )
-    except:
-        pass
-
-# ==================== SEARCH SERVICE (UPDATED WITH USERNAME SUPPORT) ====================
+# ==================== SEARCH SERVICE ====================
 async def use_service(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Use SMS service - Searches by Telegram ID or Username"""
     query = update.callback_query
@@ -1182,7 +1213,6 @@ async def handle_search_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = get_user_lang(user_id)
     input_text = update.message.text.strip()
     
-    # Check points first
     user = users_col.find_one({'user_id': user_id})
     if user.get('points', 0) < 1:
         await update.message.reply_text(LANG[lang]['insufficient_points'].format(user.get('points', 0)))
@@ -1194,15 +1224,10 @@ async def handle_search_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     target_name_from_api = None
     target_username = None
     
-    # Check if input is username or numeric ID
     if input_text.isdigit():
-        # It's a numeric ID
         target_user_id = int(input_text)
     elif is_username_input(input_text):
-        # It's a username, get user_id from chat-id-api
         clean_username = extract_username_from_input(input_text)
-        
-        # Call chat-id-api to get user_id
         user_info = await get_user_id_from_username(clean_username)
         
         if user_info and user_info.get('user_id'):
@@ -1217,30 +1242,20 @@ async def handle_search_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return SEARCH_ID
     
     try:
-        # Call main API with user_id
         phone_info = await get_phone_number_from_api(target_user_id)
         
         if phone_info and phone_info.get('found'):
-            # Deduct points
             new_balance = await deduct_points(user_id, 1, f"Search for ID: {target_user_id}")
             
-            if new_balance:
-                # Get target user info from database
+            if new_balance is not False:
                 target_user = users_col.find_one({'user_id': target_user_id})
                 
-                # Priority for name:
-                # 1. Name from chat-id-api (if username was searched)
-                # 2. Name from database (if user exists in bot)
-                # 3. From main API (if available) - but main API doesn't give name
-                # 4. Default "Unknown"
                 display_name = "Unknown"
-                
                 if target_name_from_api:
                     display_name = target_name_from_api
                 elif target_user:
                     display_name = target_user.get('first_name', 'Unknown')
                 
-                # Save to history
                 search_history_col.insert_one({
                     'user_id': user_id,
                     'target_id': target_user_id,
@@ -1251,13 +1266,11 @@ async def handle_search_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     'timestamp': get_ist()
                 })
                 
-                # Update user stats
                 users_col.update_one(
                     {'user_id': user_id},
                     {'$inc': {'total_searches': 1}}
                 )
                 
-                # Format result with admin name at the end
                 msg = LANG[lang]['search_result'].format(
                     phone_info.get('phone_number', 'Not Available'),
                     target_user_id,
@@ -1266,13 +1279,11 @@ async def handle_search_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     phone_info.get('country_code', '+91'),
                     format_number(new_balance),
                     format_ist(get_ist()),
-                    OWNER_USERNAME  # Added admin username at the end
+                    OWNER_USERNAME
                 )
                 
-                # Send result
                 result_msg = await update.message.reply_text(msg)
                 
-                # Add reaction
                 settings = settings_col.find_one({'key': 'bot_settings'})
                 if settings and settings.get('reactions_enabled', True):
                     await add_reaction(result_msg)
@@ -1338,7 +1349,6 @@ async def handle_gift_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
     code = update.message.text.strip().upper()
     expected_points = context.user_data.get('redeem_points')
     
-    # Find code
     gift_code = gift_codes_col.find_one({
         'code': code,
         'used': False,
@@ -1349,7 +1359,6 @@ async def handle_gift_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(LANG[lang]['invalid_code'])
         return REDEEM_CODE
     
-    # Mark as used
     gift_codes_col.update_one(
         {'code': code},
         {'$set': {
@@ -1359,11 +1368,9 @@ async def handle_gift_code(update: Update, context: ContextTypes.DEFAULT_TYPE):
         }}
     )
     
-    # Add points
     points = gift_code['points']
     new_balance = await add_points(user_id, points, f"Redeemed gift code: {code}")
     
-    # Update user stats
     users_col.update_one(
         {'user_id': user_id},
         {'$inc': {'total_redeemed': 1}}
@@ -1396,7 +1403,6 @@ async def view_referral(update: Update, context: ContextTypes.DEFAULT_TYPE):
     settings = settings_col.find_one({'key': 'bot_settings'})
     bonus = settings.get('referral_bonus', 2) if settings else 2
     
-    # Get referral stats
     ref_data = referral_col.find_one({'user_id': user_id})
     used_by = ref_data.get('used_by', []) if ref_data else []
     total_ref = len(used_by)
@@ -1468,7 +1474,6 @@ async def daily_bonus(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
     
-    # Give bonus
     settings = settings_col.find_one({'key': 'bot_settings'})
     bonus = settings.get('daily_bonus', 1) if settings else 1
     
@@ -1495,7 +1500,6 @@ async def view_history(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = query.from_user.id
     lang = get_user_lang(user_id)
     
-    # Get last 10 searches
     searches = list(search_history_col.find(
         {'user_id': user_id}
     ).sort('timestamp', -1).limit(10))
@@ -1529,7 +1533,6 @@ async def view_transactions(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = query.from_user.id
     lang = get_user_lang(user_id)
     
-    # Get last 10 transactions
     transactions = list(transactions_col.find(
         {'user_id': user_id}
     ).sort('timestamp', -1).limit(10))
@@ -1596,7 +1599,7 @@ async def show_faq(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Q: डेली बोनस कितने पॉइंट मिलते हैं?\n"
         f"A: 1 पॉइंट प्रतिदिन\n\n"
         f"Q: पेमेंट वेरिफाई होने में कितना समय?\n"
-        f"A: 5-10 मिनट\n\n"
+        f"A: तुरंत (Instant)\n\n"
         f"एडमिन: {OWNER_USERNAME}"
     )
     
@@ -1654,7 +1657,6 @@ async def handle_contact_message(update: Update, context: ContextTypes.DEFAULT_T
     message = update.message.text
     user = users_col.find_one({'user_id': user_id})
     
-    # Forward to admin
     admin_msg = (
         f"📨 New Message from User\n\n"
         f"👤 User: {user.get('first_name')}\n"
@@ -1727,7 +1729,6 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text("❌ Unauthorized!")
         return
     
-    # Get stats
     total_users = users_col.count_documents({})
     active_today = users_col.count_documents({
         'last_active': {'$gte': get_ist() - timedelta(days=1)}
@@ -1737,7 +1738,6 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     total_searches = search_history_col.count_documents({})
     total_orders = orders_col.count_documents({'status': 'completed'})
     
-    # Calculate revenue
     total_revenue = 0
     revenue_cursor = orders_col.find({'status': 'completed'})
     for order in revenue_cursor:
@@ -1765,9 +1765,8 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 🤝 Referral Bonus: 2 Points
 🎁 Daily Bonus: 1 Point
 
-🌐 MAIN API: {API_URL}
-🔑 API KEY: {API_KEY}
-🌐 CHAT ID API: {CHAT_ID_API_URL}
+💳 PAYMENT GATEWAY: darkxalpha.in
+🌐 Webhook: Active ✅
 
 🔧 OPTIONS:
     """
@@ -1821,7 +1820,6 @@ async def admin_view_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query.from_user.id != OWNER_ID:
         return
     
-    # Get users (paginated)
     page = context.user_data.get('user_page', 0)
     users = list(users_col.find().sort('points', -1).skip(page*10).limit(10))
     
@@ -2019,7 +2017,6 @@ async def handle_add_points(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"New balance: {format_number(new_balance)}"
     )
     
-    # Notify user
     try:
         lang = get_user_lang(target_id)
         await context.bot.send_message(
@@ -2080,7 +2077,6 @@ async def handle_remove_points(update: Update, context: ContextTypes.DEFAULT_TYP
         f"New balance: {format_number(new_balance)}"
     )
     
-    # Notify user
     try:
         lang = get_user_lang(target_id)
         await context.bot.send_message(
@@ -2123,7 +2119,6 @@ async def admin_all_transactions(update: Update, context: ContextTypes.DEFAULT_T
     keyboard = [[InlineKeyboardButton("🔙 Back", callback_data="admin_points")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    # Split message if too long
     if len(msg) > 4000:
         msg = msg[:4000] + "..."
     
@@ -2307,6 +2302,7 @@ async def admin_orders_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     processing = orders_col.count_documents({'status': 'processing'})
     completed = orders_col.count_documents({'status': 'completed'})
     rejected = orders_col.count_documents({'status': 'rejected'})
+    failed = orders_col.count_documents({'status': 'failed'})
     
     msg = f"""
 📈 Orders & Transactions
@@ -2317,6 +2313,7 @@ async def admin_orders_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 ⚙️ Processing: {processing}
 ✅ Completed: {completed}
 ❌ Rejected: {rejected}
+⚠️ Failed: {failed}
 
 Choose option:
     """
@@ -2324,6 +2321,7 @@ Choose option:
     keyboard = [
         [InlineKeyboardButton("📋 View Pending Orders", callback_data="admin_pending_orders")],
         [InlineKeyboardButton("✅ View Completed Orders", callback_data="admin_completed_orders")],
+        [InlineKeyboardButton("❌ View Failed Orders", callback_data="admin_failed_orders")],
         [InlineKeyboardButton("📊 All Transactions", callback_data="admin_all_trans")],
         [InlineKeyboardButton("🔙 Back", callback_data="admin_panel")]
     ]
@@ -2357,7 +2355,7 @@ async def admin_pending_orders(update: Update, context: ContextTypes.DEFAULT_TYP
         msg += f"   User: {order['user_id']}\n"
         msg += f"   Points: {order['points']}\n"
         msg += f"   Amount: ₹{order['amount']}\n"
-        msg += f"   Method: {order.get('payment_method', 'Not selected')}\n"
+        msg += f"   Method: {order.get('payment_method', 'gateway')}\n"
         msg += f"   Time: {format_ist(order['created_at'])}\n\n"
     
     keyboard = [[InlineKeyboardButton("🔙 Back", callback_data="admin_orders")]]
@@ -2393,7 +2391,44 @@ async def admin_completed_orders(update: Update, context: ContextTypes.DEFAULT_T
         msg += f"   User: {order['user_id']}\n"
         msg += f"   Points: {order['points']}\n"
         msg += f"   Amount: ₹{order['amount']}\n"
-        msg += f"   Method: {order.get('payment_method', 'N/A')}\n"
+        msg += f"   Method: {order.get('payment_method', 'gateway')}\n"
+        msg += f"   Time: {format_ist(order['created_at'])}\n\n"
+    
+    keyboard = [[InlineKeyboardButton("🔙 Back", callback_data="admin_orders")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    if len(msg) > 4000:
+        msg = msg[:4000] + "..."
+    
+    await query.edit_message_text(msg, reply_markup=reply_markup)
+
+async def admin_failed_orders(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """View failed orders"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.from_user.id != OWNER_ID:
+        return
+    
+    orders = list(orders_col.find({'status': {'$in': ['failed', 'rejected']}}).sort('created_at', -1).limit(10))
+    
+    if not orders:
+        await query.edit_message_text(
+            "📭 No failed orders found!",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔙 Back", callback_data="admin_orders")
+            ]])
+        )
+        return
+    
+    msg = "❌ Failed/Rejected Orders:\n\n"
+    for order in orders:
+        status_emoji = "❌" if order['status'] == 'failed' else "🚫"
+        msg += f"{status_emoji} Order: {order['order_id']}\n"
+        msg += f"   User: {order['user_id']}\n"
+        msg += f"   Points: {order['points']}\n"
+        msg += f"   Amount: ₹{order['amount']}\n"
+        msg += f"   Status: {order['status']}\n"
         msg += f"   Time: {format_ist(order['created_at'])}\n\n"
     
     keyboard = [[InlineKeyboardButton("🔙 Back", callback_data="admin_orders")]]
@@ -2438,6 +2473,10 @@ async def admin_settings_menu(update: Update, context: ContextTypes.DEFAULT_TYPE
 📡 MAIN API: {API_URL}
 🔑 API KEY: {API_KEY}
 📡 CHAT ID API: {CHAT_ID_API_URL}
+
+💳 Payment Gateway:
+📡 API: darkxalpha.in
+🌐 Webhook: Active ✅
 
 📝 Options:
     """
@@ -2681,12 +2720,10 @@ async def admin_ban_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ User not found!")
         return ConversationHandler.END
     
-    # Check if already banned
     if blacklist_col.find_one({'user_id': target_id}):
         await update.message.reply_text("❌ User already banned!")
         return ConversationHandler.END
     
-    # Add to blacklist
     blacklist_col.insert_one({
         'user_id': target_id,
         'reason': 'Banned by admin',
@@ -2696,7 +2733,6 @@ async def admin_ban_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await update.message.reply_text(f"✅ User {target_id} has been banned!")
     
-    # Notify user
     try:
         await context.bot.send_message(
             target_id,
@@ -2734,13 +2770,11 @@ async def admin_unban_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Invalid ID!")
         return BAN_USER
     
-    # Remove from blacklist
     result = blacklist_col.delete_one({'user_id': target_id})
     
     if result.deleted_count > 0:
         await update.message.reply_text(f"✅ User {target_id} has been unbanned!")
         
-        # Notify user
         try:
             await context.bot.send_message(
                 target_id,
@@ -2786,7 +2820,6 @@ async def admin_warn_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ User not found!")
         return ConversationHandler.END
     
-    # Increment warnings
     new_warnings = user.get('warnings', 0) + 1
     users_col.update_one(
         {'user_id': target_id},
@@ -2798,7 +2831,6 @@ async def admin_warn_user(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Total warnings: {new_warnings}"
     )
     
-    # Notify user
     try:
         lang = get_user_lang(target_id)
         await context.bot.send_message(
@@ -2821,7 +2853,6 @@ async def admin_export_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await query.edit_message_text("📤 Exporting data... Please wait.")
     
-    # Export users
     filename = f"users_export_{get_ist().strftime('%Y%m%d_%H%M%S')}.csv"
     with open(filename, 'w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
@@ -2839,7 +2870,6 @@ async def admin_export_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 user.get('warnings', 0)
             ])
     
-    # Send file
     with open(filename, 'rb') as f:
         await context.bot.send_document(
             OWNER_ID,
@@ -2867,7 +2897,6 @@ async def admin_backup_db(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await query.edit_message_text("💾 Creating backup... Please wait.")
     
-    # Create backup
     backup_data = {
         'timestamp': get_ist(),
         'users': list(users_col.find()),
@@ -2879,7 +2908,6 @@ async def admin_backup_db(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'referrals': list(referral_col.find())
     }
     
-    # Convert ObjectId to string
     def convert_objectid(obj):
         if isinstance(obj, ObjectId):
             return str(obj)
@@ -2887,12 +2915,10 @@ async def admin_backup_db(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     backup_json = json.dumps(backup_data, default=convert_objectid, indent=2)
     
-    # Save to file
     filename = f"backup_{get_ist().strftime('%Y%m%d_%H%M%S')}.json"
     with open(filename, 'w', encoding='utf-8') as f:
         f.write(backup_json)
     
-    # Send file
     with open(filename, 'rb') as f:
         await context.bot.send_document(
             OWNER_ID,
@@ -2902,7 +2928,6 @@ async def admin_backup_db(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     os.remove(filename)
     
-    # Save to MongoDB backup collection
     backup_col.insert_one({
         'timestamp': get_ist(),
         'filename': filename,
@@ -2935,10 +2960,8 @@ async def daily_bonus_reminder():
 # ==================== MAIN FUNCTION ====================
 def main():
     """Start the bot"""
-    # Create application
     application = Application.builder().token(BOT_TOKEN).build()
     
-    # Scheduler for daily reminders
     scheduler = AsyncIOScheduler(timezone=IST)
     scheduler.add_job(daily_bonus_reminder, 'cron', hour=10, minute=0)
     scheduler.start()
@@ -3052,8 +3075,7 @@ def main():
     application.add_handler(CallbackQueryHandler(check_points, pattern="^check_points$"))
     application.add_handler(CallbackQueryHandler(buy_points_menu, pattern="^buy_points$"))
     application.add_handler(CallbackQueryHandler(process_purchase, pattern="^buy_pkg_\\d+$"))
-    application.add_handler(CallbackQueryHandler(process_payment, pattern="^pay_.*_.*$"))
-    application.add_handler(CallbackQueryHandler(verify_payment, pattern="^verify_pay_.*$"))
+    application.add_handler(CallbackQueryHandler(check_payment_status_handler, pattern="^check_payment_.*$"))
     
     # Gift code handlers
     application.add_handler(CallbackQueryHandler(redeem_code_menu, pattern="^redeem_code$"))
@@ -3096,6 +3118,7 @@ def main():
     application.add_handler(CallbackQueryHandler(admin_orders_menu, pattern="^admin_orders$"))
     application.add_handler(CallbackQueryHandler(admin_pending_orders, pattern="^admin_pending_orders$"))
     application.add_handler(CallbackQueryHandler(admin_completed_orders, pattern="^admin_completed_orders$"))
+    application.add_handler(CallbackQueryHandler(admin_failed_orders, pattern="^admin_failed_orders$"))
     
     # Admin settings
     application.add_handler(CallbackQueryHandler(admin_settings_menu, pattern="^admin_settings$"))
@@ -3108,10 +3131,6 @@ def main():
     # Admin export/backup
     application.add_handler(CallbackQueryHandler(admin_export_data, pattern="^admin_export$"))
     application.add_handler(CallbackQueryHandler(admin_backup_db, pattern="^admin_backup$"))
-    
-    # Payment approval
-    application.add_handler(CallbackQueryHandler(admin_approve_payment, pattern="^admin_approve_.*$"))
-    application.add_handler(CallbackQueryHandler(admin_reject_payment, pattern="^admin_reject_.*$"))
     
     # Add conversation handlers
     application.add_handler(contact_conv)
@@ -3143,7 +3162,7 @@ def main():
     print(f"💰 Point Packages: {len(POINT_PACKAGES)}")
     print(f"🎁 Gift Packages: {len(GIFT_PACKAGES)}")
     print(f"👥 Total Users: {users_col.count_documents({})}")
-    print(f"💎 1 Search = 1 Point (by Telegram ID or Username)")
+    print(f"💎 1 Search = 1 Point")
     print(f"🌐 MAIN API: {API_URL}")
     print(f"🔑 API KEY: {API_KEY}")
     print(f"🌐 CHAT ID API: {CHAT_ID_API_URL}")
@@ -3153,19 +3172,19 @@ def main():
     print(f"   🤝 Referral Bonus: 2 points")
     print(f"   🎁 Daily Bonus: 1 point")
     print("="*50)
-    print("✅ NEW FEATURE ADDED:")
-    print(f"   ✓ Username Search Support")
-    print(f"   ✓ Auto-fetch Name from Chat ID API")
-    print(f"   ✓ Admin Name Displayed in Results")
+    print("✅ PAYMENT GATEWAY INTEGRATED:")
+    print(f"   💳 Gateway: darkxalpha.in")
+    print(f"   🌐 Webhook: https://webhook-2c421d918f3d.herokuapp.com/webhook")
+    print(f"   ✅ Auto Point Addition on Payment Success")
+    print(f"   ✅ Webhook + Manual Check Both Working")
     print("="*50)
     print("✅ ALL FEATURES LOADED AND WORKING:")
     print("   ✓ User System")
     print("   ✓ Point System")
-    print("   ✓ Purchase System")
+    print("   ✓ Purchase System (Payment Gateway)")
     print("   ✓ Gift Code System")
-    print("   ✓ Telegram ID Search (Shows Phone Number!)")
-    print("   ✓ Telegram Username Search (New!)")
-    print("   ✓ Name Fetch from Chat ID API (New!)")
+    print("   ✓ Telegram ID Search")
+    print("   ✓ Telegram Username Search")
     print("   ✓ Referral System")
     print("   ✓ Daily Bonus")
     print("   ✓ Admin Panel (45+ features)")
@@ -3175,10 +3194,6 @@ def main():
     print("   ✓ Export/Backup")
     print("   ✓ Auto Reactions")
     print("   ✓ Bilingual Support")
-    print("   ✓ Payment Verification")
-    print("   ✓ All Admin Buttons Working")
-    print("   ✓ Settings Working Separately")
-    print("   ✓ Admin Username Displayed Everywhere")
     print("="*50)
     
     application.run_polling(allowed_updates=Update.ALL_TYPES)
