@@ -63,18 +63,19 @@ OWNER_USERNAME = "@VIP_X_OFFICIAL"
 # India Timezone
 IST = timezone('Asia/Kolkata')
 
-# Point Packages (Points = Amount * 5, so ₹5 = 1 point)
+# Point Packages (UPDATED PRICES - Lowered as requested)
+# Formula: Points * 2 = Price (5x2=10, 10x2=20, etc.)
 POINT_PACKAGES = {
-    "5": {"points": 5, "price": 25, "emoji": "⚡", "popular": False},
-    "10": {"points": 10, "price": 50, "emoji": "💫", "popular": False},
-    "15": {"points": 15, "price": 75, "emoji": "✨", "popular": False},
-    "20": {"points": 20, "price": 100, "emoji": "⭐", "popular": True},
-    "30": {"points": 30, "price": 150, "emoji": "🌟", "popular": False},
-    "50": {"points": 50, "price": 250, "emoji": "💎", "popular": False},
-    "100": {"points": 100, "price": 500, "emoji": "👑", "popular": True},
+    "5": {"points": 5, "price": 10, "emoji": "⚡", "popular": False},
+    "10": {"points": 10, "price": 20, "emoji": "💫", "popular": False},
+    "15": {"points": 15, "price": 30, "emoji": "✨", "popular": False},
+    "20": {"points": 20, "price": 40, "emoji": "⭐", "popular": True},
+    "30": {"points": 30, "price": 60, "emoji": "🌟", "popular": False},
+    "50": {"points": 50, "price": 100, "emoji": "💎", "popular": False},
+    "100": {"points": 100, "price": 200, "emoji": "👑", "popular": True},
 }
 
-# Gift Packages
+# Gift Packages (same structure)
 GIFT_PACKAGES = {
     "5": {"points": 5, "emoji": "⚡"},
     "10": {"points": 10, "emoji": "💫"},
@@ -210,6 +211,10 @@ try:
     print(f"   💳 PAYMENT TOKEN: {PAYMENT_TOKEN[:10]}...")
     print(f"   🌐 PAYMENT API: {PAYMENT_API_URL}")
     print("="*50)
+    print("✅ UPDATED POINT PRICES:")
+    for key, pkg in POINT_PACKAGES.items():
+        print(f"   {pkg['points']} Points = ₹{pkg['price']}")
+    print("="*50)
     
 except Exception as e:
     print(f"❌ DATABASE ERROR: {e}")
@@ -228,7 +233,7 @@ LANG = {
         'cancel': "❌ रद्द करें",
         
         # Points
-        'check_points': "💰 आपके पॉइंट्स: {}\n\n1 पॉइंट = ₹5\n1 सर्च = 1 पॉइंट",
+        'check_points': "💰 आपके पॉइंट्स: {}\n\n1 पॉइंट = ₹2\n1 सर्च = 1 पॉइंट",
         'buy_points': "🛒 पॉइंट्स खरीदें\n\nपैकेज चुनें:",
         'insufficient_points': "❌ अपर्याप्त पॉइंट्स! आपके पास {} पॉइंट्स हैं।",
         
@@ -286,7 +291,7 @@ LANG = {
         'cancel': "❌ Cancel",
         
         # Points
-        'check_points': "💰 Your Points: {}\n\n1 Point = ₹5\n1 Search = 1 Point",
+        'check_points': "💰 Your Points: {}\n\n1 Point = ₹2\n1 Search = 1 Point",
         'buy_points': "🛒 Buy Points\n\nChoose package:",
         'insufficient_points': "❌ Insufficient points! You have {} points.",
         
@@ -3195,6 +3200,10 @@ def main():
     print(f"🔑 API KEY: {API_KEY}")
     print(f"💳 PAYMENT GATEWAY: DarkXAlpha (FIXED - HTTP 201)")
     print(f"🌐 PAYMENT API: {PAYMENT_API_URL}")
+    print("="*50)
+    print("✅ UPDATED POINT PRICES (LOWERED):")
+    for key, pkg in POINT_PACKAGES.items():
+        print(f"   {pkg['points']} Points = ₹{pkg['price']}")
     print("="*50)
     print("✅ BONUS SETTINGS:")
     print(f"   🎁 Welcome Bonus: 2 points")
